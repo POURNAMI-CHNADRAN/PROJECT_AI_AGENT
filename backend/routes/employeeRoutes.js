@@ -9,6 +9,12 @@ import {
   remove
 } from "../controllers/employeeController.js";
 
+import {
+  getMyAllocations,
+  getActiveAllocations,
+  getUtilization
+} from "../controllers/allocationController.js";
+
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -19,7 +25,6 @@ const router = express.Router();
 |--------------------------------------------------------------------------
 */
 router.post("/seed_admin", createEmployee);
-
 
 /*
 |--------------------------------------------------------------------------
@@ -33,7 +38,6 @@ router.post(
   createEmployee
 );
 
-
 /*
 |--------------------------------------------------------------------------
 |  GET ALL EMPLOYEES (Admin, HR, Manager)
@@ -46,11 +50,9 @@ router.get(
   getAllEmployees
 );
 
-
 /*
 |--------------------------------------------------------------------------
-|  GET LOGGED-IN EMPLOYEE / SELF PROFILE  (Any logged-in user)
-|  GET /api/employees/me
+|  GET LOGGED-IN EMPLOYEE PROFILE
 |--------------------------------------------------------------------------
 */
 router.get(
@@ -59,11 +61,39 @@ router.get(
   getEmployees
 );
 
+/*
+|--------------------------------------------------------------------------
+|  🔥 EMPLOYEE ALLOCATION ROUTES (PUT BEFORE :id)
+|--------------------------------------------------------------------------
+*/
+
+// ✅ Get all allocations of logged-in employee
+router.get(
+  "/allocations",
+  protect,
+  authorize("Employee"),
+  getMyAllocations
+);
+
+// ✅ Get ACTIVE allocations
+router.get(
+  "/allocations/active",
+  protect,
+  authorize("Employee"),
+  getActiveAllocations
+);
+
+// ✅ Get utilization %
+router.get(
+  "/allocations/utilization",
+  protect,
+  authorize("Employee"),
+  getUtilization
+);
 
 /*
 |--------------------------------------------------------------------------
 |  GET SINGLE EMPLOYEE BY ID
-|  Allowed for Admin, HR, Employee (only own), Manager (only team)
 |--------------------------------------------------------------------------
 */
 router.get(
@@ -72,13 +102,9 @@ router.get(
   getOne
 );
 
-
 /*
 |--------------------------------------------------------------------------
 |  UPDATE EMPLOYEE
-|  Admin can update all
-|  HR cannot update Admin
-|  Employee can update only own limited fields
 |--------------------------------------------------------------------------
 */
 router.patch(
@@ -88,11 +114,9 @@ router.patch(
   update
 );
 
-
 /*
 |--------------------------------------------------------------------------
-|  SOFT DELETE EMPLOYEE (Inactive)
-|  ONLY Admin can delete
+|  DELETE EMPLOYEE
 |--------------------------------------------------------------------------
 */
 router.delete(

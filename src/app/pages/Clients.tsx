@@ -88,6 +88,8 @@ export default function Clients() {
 
   const [newClient, setNewClient] = useState<ClientType>(emptyClient);
 
+  const [showInactive, setShowInactive] = useState(false);
+
   /* -------------------- LOAD CLIENTS -------------------- */
   const loadClients = async () => {
     setLoading(true);
@@ -107,19 +109,24 @@ export default function Clients() {
     loadClients();
   }, []);
 
-  const filteredClients = clients.filter((c) =>
-    c.client_name.toLowerCase().includes(search.toLowerCase())
-  );
+  /* -------------------- FILTERED CLIENTS (ACTIVE ONLY) -------------------- */
+  const filteredClients = clients
+    .filter((c) => (showInactive ? true : c.isActive))
+    .filter((c) =>
+      c.client_name.toLowerCase().includes(search.toLowerCase())
+    );
 
   /* -------------------- KPI CALCULATIONS -------------------- */
   const totalClients = clients.length;
   const activeClients = clients.filter((c) => c.isActive).length;
+  const inactiveClients = clients.filter((c) => c.isActive === false).length;
+  const industriesCount = new Set(
+    clients.map((c) => c.industry).filter(Boolean)
+  ).size;
 
-  const industriesCount = new Set(clients.map((c) => c.industry).filter(Boolean))
-    .size;
-
-  const countriesCount = new Set(clients.map((c) => c.country).filter(Boolean))
-    .size;
+  const countriesCount = new Set(
+    clients.map((c) => c.country).filter(Boolean)
+  ).size;
 
   const clientsThisMonth = clients.filter((c) => {
     if (!c.createdAt) return false;
@@ -131,6 +138,7 @@ export default function Clients() {
     );
   }).length;
 
+  /* -------- COLLECT ALL INDUSTRIES FOR BADGES -------- */
   const industryMap: Record<string, number> = {};
   clients.forEach((c) => {
     if (c.industry) {
@@ -138,24 +146,56 @@ export default function Clients() {
     }
   });
 
-  const topIndustry =
-    Object.entries(industryMap).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    "N/A";
+  const maxCount =
+    Object.keys(industryMap).length > 0
+      ? Math.max(...Object.values(industryMap))
+      : 0;
+
+  const topIndustries =
+    maxCount > 0
+      ? Object.entries(industryMap)
+          .filter(([_, count]) => count === maxCount)
+          .map(([industry]) => industry)
+      : [];
 
   /* -------------------- CREATE CLIENT -------------------- */
   const handleAddClient = async () => {
-    const res = await fetch(`${API_BASE}/api/clients`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(newClient),
-    });
+    const payload = {
+      ...newClient,
+      address: newClient.address || "N/A",
+      isActive: newClient.isActive,
+    };
 
-    if (!res.ok) return alert("Failed to create client");
-    setShowAdd(false);
-    loadClients();
+    delete (payload as any)._id;
+
+    if (!payload.client_name || !payload.industry || !payload.email) {
+      return alert("Client Name, Industry, and Email are required!");
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/clients`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        return alert(
+          "Failed to Create Client: " + (error.message || res.statusText)
+        );
+      }
+
+      setShowAdd(false);
+      setNewClient(emptyClient);
+      loadClients();
+    } catch (err) {
+      console.log("Add Client Error:", err);
+      alert("An Unexpected Error Occurred");
+    }
   };
 
   /* -------------------- UPDATE CLIENT -------------------- */
@@ -195,16 +235,16 @@ export default function Clients() {
     <div className="p-6 w-full space-y-10 bg-sky-50">
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-sky-300 to-sky-200 p-8 rounded-2xl shadow-lg flex justify-between items-center">
-        <div className="flex items-center gap-5">
-          <div className="bg-white w-14 h-14 rounded-xl flex items-center justify-center shadow">
-            <Building2 size={32} className="text-sky-700" />
-          </div>
-          <div>
-            <h1 className="text-4xl font-extrabold text-sky-900">Client Management</h1>
-            <p className="text-sky-700 text-sm">Organize your customers, partners & businesses</p>
-          </div>
-        </div>
+            <div className="bg-sky-200 p-7 rounded-xl shadow flex items-center justify-between text-sky-900 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="bg-white p-3 rounded-lg shadow border border-sky-100">
+                  <Building2 size={30} className="text-sky-700" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">Client Management</h1>
+                  <p className="text-sky-700">Organize your customers, partners & businesses</p>
+                </div>
+              </div>
 
         {(userRole === "Admin" || userRole === "HR") && (
           <button
@@ -216,7 +256,7 @@ export default function Clients() {
         )}
       </div>
 
-      {/* INSIGHTS PANEL - CENTERED KPIs */}
+      {/* KPIs */}
       <div className="w-full max-w-7xl mx-auto bg-white rounded-2xl shadow-xl border border-sky-200 p-10 flex flex-col items-center">
 
         <h2 className="text-3xl font-extrabold text-sky-900 mb-10 flex items-center gap-3">
@@ -224,7 +264,7 @@ export default function Clients() {
           Client Insights
         </h2>
 
-        {/* CENTERED 2-COLUMN KPI GRID */}
+        {/* KPI GRID */}
         <div
           className="
             grid 
@@ -232,18 +272,73 @@ export default function Clients() {
             place-items-center 
             mx-auto
             w-full
-            max-w-[900px]
+            max-w-[1100px]
             grid-cols-1
             sm:grid-cols-2
+            lg:grid-cols-3
           "
         >
           <KPI value={totalClients} label="Total Clients" icon={<Building2 size={30} />} color="sky" />
           <KPI value={activeClients} label="Active Clients" icon={<Briefcase size={30} />} color="green" />
+          <KPI value={inactiveClients} label="Inactive Clients" icon={<Trash2 size={30} />} color="yellow" />
           <KPI value={industriesCount} label="Industries" icon={<Globe2 size={30} />} color="orange" />
           <KPI value={countriesCount} label="Countries" icon={<MapPin size={30} />} color="purple" />
           <KPI value={clientsThisMonth} label="Added This Month" icon={<Plus size={30} />} color="pink" />
-          <KPI value={topIndustry} label="Top Industry" icon={<Briefcase size={30} />} color="yellow" />
         </div>
+
+      {/* TOP INDUSTRIES - FULL WIDTH KPI STYLE */}
+      <div
+        className="
+          w-full 
+          max-w-7xl 
+          mx-auto 
+          mt-10
+          bg-gradient-to-br from-blue-50 to-blue-100
+          border border-blue-200 
+          rounded-2xl 
+          shadow-md 
+          p-10 
+          flex 
+          flex-col
+          items-center
+          text-center
+          gap-6
+        "
+      >
+        {/* Icon box */}
+        <div className="bg-blue-600 text-white w-20 h-20 rounded-xl flex items-center justify-center shadow">
+          <Briefcase size={36} />
+        </div>
+
+        {/* Title */}
+        <h3 className="text-3xl font-extrabold text-blue-900">
+          Top Industries
+        </h3>
+
+        {/* Badges */}
+        {topIndustries.length === 0 ? (
+          <p className="text-blue-700">No industry data available</p>
+        ) : (
+          <div className="flex flex-wrap justify-center gap-4">
+            {topIndustries.map((ind) => (
+              <span
+                key={ind}
+                className="
+                  px-5 py-2 
+                  border border-blue-500 
+                  text-blue-800
+                  rounded-full 
+                  text-sm font-semibold
+                  bg-white
+                  shadow-sm
+                "
+              >
+                {ind}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
 
       </div>
 
@@ -335,10 +430,11 @@ function KPI({ value, label, icon, color }: KPIProps) {
   return (
     <div
       className={`
-      bg-gradient-to-br ${bg[color]}
-      p-7 rounded-2xl shadow-md border 
-      w-full max-w-md flex items-center gap-5
-    `}
+        bg-gradient-to-br ${bg[color]}
+        p-7 rounded-2xl shadow-md border 
+        w-full max-w-md flex items-center gap-5
+        hover:shadow-xl hover:scale-[1.03] transition-all
+      `}
     >
       <div
         className={`${iconBg[color]} text-white w-14 h-14 rounded-xl flex items-center justify-center`}

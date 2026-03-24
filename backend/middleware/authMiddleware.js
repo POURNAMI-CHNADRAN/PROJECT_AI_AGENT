@@ -51,3 +51,36 @@ export const authorize = (...roles) => {
     next();
   };
 };
+
+// req.user.role is assumed to be set by your auth middleware (JWT)
+
+export const allowRoles = (...allowed) => {
+  return (req, res, next) => {
+    if (!req.user || !allowed.includes(req.user.role)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    next();
+  };
+};
+
+// Employee-specific: only allow updating certain fields
+export const allowEmployeeStatusUpdate = (req, res, next) => {
+  const role = req.user.role;
+
+  if (role === "Employee") {
+    // Only allow {status: "..."}
+    const allowedFields = ["status"];
+
+    const invalidFields = Object.keys(req.body).filter(
+      (field) => !allowedFields.includes(field)
+    );
+
+    if (invalidFields.length > 0) {
+      return res.status(403).json({
+        error: "Employees can update Status only"
+      });
+    }
+  }
+
+  next();
+};

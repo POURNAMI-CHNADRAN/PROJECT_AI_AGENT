@@ -12,16 +12,11 @@ const allocationSchema = new mongoose.Schema(
       ref: "Project",
       required: true,
     },
-    allocationPercentage: {
+    allocation: {
       type: Number,
       required: true,
       min: 0,
       max: 100,
-    },
-    billingType: {
-      type: String,
-      enum: ["BILLABLE", "NON_BILLABLE", "SHADOW"],
-      required: true,
     },
     startDate: {
       type: Date,
@@ -29,13 +24,10 @@ const allocationSchema = new mongoose.Schema(
     },
     endDate: {
       type: Date,
+      required: true,
     },
   },
   { timestamps: true }
 );
-
-allocationSchema.index({ employee: 1 });
-allocationSchema.index({ project: 1 });
-allocationSchema.index({ startDate: 1, endDate: 1 });
 
 export default mongoose.model("Allocation", allocationSchema);

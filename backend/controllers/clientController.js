@@ -23,10 +23,14 @@ export const createClient = async (req, res) => {
 };
 
 
-// ➤ GET ALL ACTIVE CLIENTS
+// ➤ GET ALL CLIENTS (Active + Inactive)
 export const getClients = async (req, res) => {
-  const clients = await Client.find({ isActive: true }).sort({ client_name: 1 });
-  res.json({ success: true, data: clients });
+  try {
+    const clients = await Client.find().sort({ client_name: 1 });
+    res.json({ success: true, data: clients });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 
