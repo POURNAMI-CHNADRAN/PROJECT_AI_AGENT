@@ -1,55 +1,119 @@
 import Timesheet from "../models/Timesheet.js";
+import Employee from "../models/Employee.js";
+import Project from "../models/Project.js";
+import Story from "../models/Story.js";
+import { validateTimesheetDate } from "../utils/dateValidator.js";
 
-export const getProfile = (req, res) => {
-  res.json({
-    message: "Logged-in User Info",
-    user: {
-      _id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role
-    }
-  });
-};
-
-export const create = async (req, res) => {
+//
+// 1️⃣ SUBMIT TIMESHEET (Employee)
+//
+export const submitTimesheet = async (req, res) => {
   try {
-    const timesheet = await Timesheet.create(req.body);
-    res.json(timesheet);
+    const {
+      employee_id,
+      project_id,
+      story_id,
+      story_points_completed,
+      work_date
+    } = req.body;
+
+    // Validate date
+    const dateCheck = validateTimesheetDate(work_date);
+    if (!dateCheck.valid)
+      return res.status(400).json({ message: dateCheck.message });
+
+    const workDateObj = new Date(work_date);
+
+    // Duplicate prevention
+    const exists = await Timesheet.findOne({
+      employee_id,
+      story_id,
+      work_date: workDateObj
+    });
+
+    if (exists) {
+      return res.status(400).json({
+        message: "Timesheet already Exists for this Story on this Date"
+      });
+    }
+
+    // Check employee
+    const emp = await Employee.findById(employee_id);
+    if (!emp) return res.status(404).json({ message: "Employee NOT Found" });
+
+    // Check project
+    const proj = await Project.findById(project_id);
+    if (!proj) return res.status(404).json({ message: "Project NOT Found" });
+
+    // Check story
+    const story = await Story.findById(story_id);
+    if (!story) return res.status(404).json({ message: "Story NOT Found" });
+
+    // Create timesheet
+    const sheet = await Timesheet.create({
+      employee_id,
+      project_id,
+      story_id,
+      story_points_completed,
+      work_date: workDateObj,
+      status: "Pending",
+      audit: { created_by: req.user.name }
+    });
+
+    res.json({ data: sheet });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-export const getAll = async (req, res) => {
+//
+// 2️⃣ APPROVE TIMESHEET (Admin / HR)
+//
+export const approveTimesheet = async (req, res) => {
+  const ts = await Timesheet.findById(req.params.id);
+  if (!ts) return res.status(404).json({ message: "Timesheet NOT Found" });
+
+  ts.status = "Approved";
+  ts.audit.updated_by = req.user.name;
+  await ts.save();
+
+  res.json(ts);
+};
+
+//
+// 3️⃣ REJECT TIMESHEET (Admin / HR)
+//
+export const rejectTimesheet = async (req, res) => {
+  try {
+    const ts = await Timesheet.findById(req.params.id);
+
+    if (!ts) {
+      return res.status(404).json({ message: "Timesheet NOT Found" });
+    }
+
+    const reason = req.body?.reason ?? "No Reason Provided";
+
+    ts.status = "Rejected";
+    ts.notes = reason;
+    ts.audit.updated_by = req.user.name;
+
+    await ts.save();
+
+    res.json(ts);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+//
+// 4️⃣ GET HISTORY
+//
+export const getTimesheetHistory = async (req, res) => {
   const data = await Timesheet.find()
-    .populate("employee_id", "full_name")
-    .populate("project_id", "project_name")
-    .populate("story_id", "title");
+    .populate("employee_id", "name")
+    .populate("project_id", "name")
+    .populate("story_id", "title story_points");
 
-  res.json(data);
-};
-
-export const getOne = async (req, res) => {
-  const data = await Timesheet.findById(req.params.id);
-  res.json(data);
-};
-
-export const update = async (req, res) => {
-  const data = await Timesheet.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true }
-  );
-  res.json(data);
-};
-
-export const getByEmployee = async (req, res) => {
-  const data = await Timesheet.find({ employee_id: req.params.id });
-  res.json(data);
-};
-
-export const getByProject = async (req, res) => {
-  const data = await Timesheet.find({ project_id: req.params.id });
   res.json(data);
 };

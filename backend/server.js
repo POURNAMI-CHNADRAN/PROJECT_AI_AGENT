@@ -15,6 +15,7 @@ import clientRoutes from "./routes/clientRoutes.js";
 import storyRoutes from "./routes/storyRoutes.js";
 import billingRoutes from "./routes/billingRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import chatRoutes from "./routes/chat.js";
 
 dotenv.config();
 connectDB();
@@ -36,6 +37,7 @@ app.use("/api/employee-skills", employeeSkillRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/stories", storyRoutes);
 app.use("/api/billing", billingRoutes);
+app.use("/api/chat", chatRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is Running 🚀");

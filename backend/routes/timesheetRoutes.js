@@ -1,21 +1,29 @@
 import express from "express";
 import {
-  create,
-  getAll,
-  getOne,
-  update,
-  getByEmployee,
-  getByProject
+  submitTimesheet,
+  approveTimesheet,
+  rejectTimesheet,
+  getTimesheetHistory
 } from "../controllers/timesheetController.js";
+
+import {
+  protect,
+  employeeOnly,
+  adminOrHROnly
+} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", create);
-router.get("/", getAll);
-router.get("/:id", getOne);
-router.put("/:id", update);
+// Employee submits
+router.post("/submit", protect, employeeOnly, submitTimesheet);
 
-router.get("/employee/:id", getByEmployee);
-router.get("/project/:id", getByProject);
+// HR / Admin approves
+router.put("/approve/:id", protect, adminOrHROnly, approveTimesheet);
+
+// HR / Admin rejects
+router.put("/reject/:id", protect, adminOrHROnly, rejectTimesheet);
+
+// Timesheet history
+router.get("/", protect, adminOrHROnly, getTimesheetHistory);
 
 export default router;

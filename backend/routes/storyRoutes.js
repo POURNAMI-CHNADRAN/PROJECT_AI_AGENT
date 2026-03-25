@@ -2,41 +2,30 @@ import express from "express";
 import {
   create,
   getAll,
+  getAssignedStories,
   getOne,
   update,
   remove,
-  getAssignedStories
 } from "../controllers/storyController.js";
 
-import { protect, authorize, allowEmployeeStatusUpdate } from "../middleware/authMiddleware.js";
+import { protect, adminOrHROnly, employeeOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// CREATE (Admin + HR)
-router.post("/", protect, authorize("Admin", "HR"), create);
+// Admin + HR
+router.post("/", protect, adminOrHROnly, create);
+router.get("/", protect, adminOrHROnly, getAll);
 
-// GET ALL (Admin + HR)
-router.get("/", protect, authorize("Admin", "HR"), getAll);
+// Employee — assigned stories only
+router.get("/assigned", protect, employeeOnly, getAssignedStories);
 
-// GET ONLY ASSIGNED STORIES (Employee)
-router.get("/assigned", protect, authorize("Employee"), getAssignedStories);
+// ANY role can view one story (controller restricts employees)
+router.get("/:id", protect, getOne);
 
-// GET ONE STORY (Admin, HR, Employee owner)
-router.get("/:id", protect, authorize("Admin", "HR", "Employee"), getOne);
+// Admin + HR + Employee (controller enforces rules)
+router.put("/:id", protect, update);
 
-// UPDATE STORY
-router.put(
-  "/:id", protect,
-  authorize("Admin", "HR", "Employee"),
-  allowEmployeeStatusUpdate,
-  update
-);
-
-// DELETE STORY (Admin or HR with TODO restriction)
-router.delete(
-  "/:id", protect,
-  authorize("Admin", "HR"),
-  remove
-);
+// Admin OR HR limited delete
+router.delete("/:id", protect, remove);
 
 export default router;

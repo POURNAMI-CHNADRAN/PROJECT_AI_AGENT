@@ -12,74 +12,138 @@ import {
   Clock,
   Upload,
   ActivitySquare,
-  ArrowLeft,
   DollarSign,
   Sparkles,
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 
+/* ============================================================================
+   FULL MyProfile.tsx — With Real Backend Integration
+============================================================================ */
+
 export default function MyProfile() {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-  const token = localStorage.getItem("token");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const token = localStorage.getItem("token") || "";
 
   const [profile, setProfile] = useState<any>(null);
+  const [employeeSkills, setEmployeeSkills] = useState<any[]>([]);
+  const [employeeAllocations, setEmployeeAllocations] = useState<any[]>([]);
+  const [timesheets, setTimesheets] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [payroll, setPayroll] = useState<any>(null);
+
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
-  const [employeeSkills, setEmployeeSkills] = useState<any[]>([]);
 
-  /** Mock Data (from EmployeeProfile) */
-  const skills = [
-    { name: "React", proficiency: "Expert" },
-    { name: "Typescript", proficiency: "Advanced" },
-    { name: "Node.js", proficiency: "Intermediate" },
-    { name: "AWS", proficiency: "Intermediate" },
-  ];
-
-  const allocations = [
-    { project: "E-commerce Platform", allocation: "60%" },
-    { project: "Mobile App Redesign", allocation: "40%" },
-  ];
-
-  const timesheets = [
-    { date: "2026-03-15", project: "E-commerce Platform", hours: "8h", status: "Approved" },
-    { date: "2026-03-14", project: "Mobile App Redesign", hours: "6h", status: "Approved" },
-    { date: "2026-03-13", project: "E-commerce Platform", hours: "8h", status: "Pending" },
-  ];
-
-  /** Avatar Upload */
+  /* ============================================================================
+     Avatar Upload Preview Only (No API Upload Yet)
+  ============================================================================ */
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
       const url = URL.createObjectURL(file);
-      setProfile((prev: any) => ({ ...prev, avatarPreview: url }));
+      setProfile((p: any) => ({ ...p, avatarPreview: url }));
+    }
+  };
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+
+  /* ============================================================================
+     API LOADERS
+  ============================================================================ */
+
+  const loadEmployeeSkills = async (empId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/employee-skills/${empId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setEmployeeSkills(data.data || []);
+    } catch (err) {
+      console.error("Skill Load Error", err);
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const loadEmployeeAllocations = async (empId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/allocations?employeeId=${empId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setEmployeeAllocations(data.data || []);
+    } catch (err) {
+      console.error("Allocation Load Error", err);
+    }
+  };
 
-  /** Load Profile */
+  const loadTimesheets = async (empId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/timesheets/${empId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setTimesheets(data.data || []);
+    } catch (err) {
+      console.error("Timesheet Load Error", err);
+    }
+  };
+
+  const loadPayroll = async (empId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/payroll/${empId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setPayroll(data.data || null);
+    } catch (err) {
+      console.error("Payroll Load Error", err);
+    }
+  };
+
+  const loadDocuments = async (empId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/documents/${empId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setDocuments(data.data || []);
+    } catch (err) {
+      console.error("Documents Load Error", err);
+    }
+  };
+
+  /* ============================================================================
+     LOAD PROFILE + ALL EMPLOYEE MODULE DATA
+  ============================================================================ */
   useEffect(() => {
-    fetch(`${API_BASE}/api/employees/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/employees/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
         setProfile(data.data || null);
 
-        
-      if (data?.data?._id) {
-        fetch(`${API_BASE}/api/employee-skills/${data.data._id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => res.json())
-          .then((S) => setEmployeeSkills(S.data || []));
+        if (data?.data?._id) {
+          const empId = data.data._id;
+
+          loadEmployeeSkills(empId);
+          loadEmployeeAllocations(empId);
+          loadTimesheets(empId);
+          loadPayroll(empId);
+          loadDocuments(empId);
+        }
+      } catch (err) {
+        console.error("Profile Load Error", err);
+      } finally {
+        setLoading(false);
       }
+    })();
+  }, []);
 
-      setLoading(false);
-    });
-}, []);
+  /* ============================================================================
+     FORMATTING
+  ============================================================================ */
 
-  
   const formattedDate =
     profile?.joiningDate &&
     new Date(profile.joiningDate).toLocaleDateString("en-IN", {
@@ -89,7 +153,11 @@ export default function MyProfile() {
     });
 
   if (loading)
-    return <div className="p-6 text-sky-700 text-lg animate-fade-in">Loading Profile...</div>;
+    return (
+      <div className="p-6 text-sky-700 text-lg animate-fade-in">
+        Loading Profile...
+      </div>
+    );
 
   if (!profile)
     return (
@@ -98,45 +166,42 @@ export default function MyProfile() {
       </div>
     );
 
+  /* ============================================================================
+     FULL JSX UI BELOW — MATCHES YOUR CURRENT DESIGN
+  ============================================================================ */
+
   return (
     <div className="p-6 space-y-10 bg-sky-50">
+      {/* HEADER */}
+      <div className="bg-sky-200 p-8 rounded-xl shadow-lg flex items-center gap-6">
 
-      {/* HEADER CARD */}
-      <div className="bg-sky-200 p-8 rounded-xl shadow-lg flex items-center gap-6 animate-fade-slide-down">
-
-        {/* Editable Avatar */}
+        {/* Avatar */}
         <div
           className="w-28 h-28 rounded-full bg-white shadow-xl border border-sky-200 flex items-center justify-center overflow-hidden relative group cursor-pointer"
           onClick={() => document.getElementById("avatarUpload")?.click()}
         >
           {profile.avatarPreview ? (
-            <img
-              src={profile.avatarPreview}
-              className="w-full h-full object-cover group-hover:opacity-60 transition"
-            />
+            <img src={profile.avatarPreview} className="w-full h-full object-cover" />
           ) : (
-            <User size={54} className="text-sky-900 group-hover:opacity-60 transition" />
+            <User size={54} className="text-sky-900" />
           )}
 
-          <input
-            id="avatarUpload"
-            type="file"
-            accept="image/*"
+          <input type="file" id="avatarUpload" accept="image/*"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
               const url = URL.createObjectURL(file);
-              setProfile((prev: any) => ({ ...prev, avatarPreview: url }));
+              setProfile((p: any) => ({ ...p, avatarPreview: url }));
             }}
           />
 
-          <div className="absolute inset-0 bg-black/40 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition rounded-full backdrop-blur-sm">
+          <div className="absolute inset-0 bg-black/40 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition rounded-full">
             Change Photo
           </div>
         </div>
 
-        {/* Basic Info */}
+        {/* Name + Email */}
         <div>
           <h1 className="text-3xl font-bold text-sky-900">{profile.name}</h1>
           <p className="text-sky-700">{profile.email}</p>
@@ -153,9 +218,8 @@ export default function MyProfile() {
         </span>
       </div>
 
-
-      {/* TAB NAVIGATION */}
-      <div className="flex gap-6 border-b pb-3 font-medium animate-fade-in">
+      {/* TAB NAV */}
+      <div className="flex gap-6 border-b pb-3 font-medium">
         {[
           { id: "profile", label: "Profile" },
           { id: "job", label: "Job Details" },
@@ -167,360 +231,242 @@ export default function MyProfile() {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`pb-2 transition-all ${
+            className={`pb-2 ${
               activeTab === tab.id
                 ? "border-b-2 border-sky-600 text-sky-700 font-semibold"
                 : "text-sky-700 hover:text-sky-900"
             }`}
+            onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-
-      {/* CONTENT AREA */}
-      <div className="animate-fade-in">
-
-        {/* TAB: PROFILE */}
+      {/* START CONTENT */}
+      <div>
+        {/* PERSONAL PROFILE TAB */}
         {activeTab === "profile" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Personal Info */}
-            <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200 hover:shadow-lg transition">
+            {/* Personal Card */}
+            <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-sky-900">
                 <User size={20} /> Personal Information
               </h3>
 
               <div className="space-y-4">
-                <div className="flex items-center gap-3"><Mail size={18} /> {profile.email}</div>
-                <div className="flex items-center gap-3"><MapPin size={18} /> {profile.location}</div>
-
-                <div className="flex items-center gap-3">
-                  <Calendar size={18} />
-                  Joined: <span className="font-medium">{formattedDate}</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Layers size={18} />
-                  Department: <span className="font-medium">{profile.departmentId?.name}</span>
-                </div>
+                <div className="flex gap-3"><Mail size={18} /> <strong>{profile.email}</strong></div>
+                <div className="flex gap-3"><MapPin size={18} /> {profile.location}</div>
+                <div className="flex gap-3"><Calendar size={18} /> Joined: <strong>{formattedDate}</strong></div>
+                <div className="flex gap-3"><Layers size={18} /> Department: <strong>{profile.departmentId?.name}</strong></div>
               </div>
             </div>
 
-
-            {/* Employment Summary */}
-            <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200 hover:shadow-lg transition">
+            {/* Employment Card */}
+            <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-sky-900">
                 <Briefcase size={20} /> Employment Summary
               </h3>
 
               <div className="space-y-4">
-                <div className="flex items-center gap-3"><Briefcase size={18} /> Role:  
-                  <span className="font-medium">{profile.role}</span>
+                <div className="flex gap-3"><Briefcase size={18} /> Role: <strong>{profile.role}</strong></div>
+                <div className="flex gap-3">
+                  <IndianRupee size={18} /> Monthly Cost:
+                  ₹{profile.costPerMonth?.toLocaleString()}
                 </div>
-
-                <div className="flex items-center gap-3"><IndianRupee size={18} /> Monthly Cost:
-                  <span className="font-medium">₹{profile.costPerMonth?.toLocaleString()}</span>
-                </div>
-
-                <div className="flex items-center gap-3"><ActivitySquare size={18} /> 
-                  Employee ID: <span className="font-medium">{profile.employeeId}</span>
-                </div>
+                <div className="flex gap-3"><ActivitySquare size={18} /> Employee ID: <strong>{profile.employeeId}</strong></div>
               </div>
             </div>
-
           </div>
         )}
 
-
-        {/* TAB: JOB */}
+        {/* JOB TAB */}
         {activeTab === "job" && (
-          <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200 text-sky-900 space-y-3 hover:shadow-lg transition">
+          <div className="bg-white p-6 rounded-xl border border-sky-200 shadow-md">
             <h3 className="text-xl font-semibold flex items-center gap-2"><Briefcase size={20}/> Job Details</h3>
 
-            <p className="text-black">Role: <strong>{profile.role}</strong></p>
-            <p className="text-black">Department: <strong>{profile.departmentId?.name}</strong></p>
-            <p className="text-black">Reporting To: <strong>Not Assigned</strong></p>
-            <p className="text-black">Employment Type: <strong>Full-Time</strong></p>
+            <p>Role: <strong>{profile.role}</strong></p>
+            <p>Department: <strong>{profile.departmentId?.name}</strong></p>
+            <p>Reporting To: <strong>Not Assigned</strong></p>
+            <p>Employment Type: <strong>Full-Time</strong></p>
           </div>
         )}
 
-
-        {/* TAB: SKILLS */}
+        {/* SKILLS TAB */}
         {activeTab === "skills" && (
-          <div className="bg-white p-8 rounded-2xl shadow-xl border border-sky-200 
-              hover:shadow-2xl transition duration-300">
-
+          <div className="bg-white p-8 rounded-2xl shadow-xl border border-sky-200">
             <h3 className="text-2xl font-bold mb-6 flex items-center gap-3 text-sky-900">
               <Sparkles className="w-6 h-6 text-sky-700" />
               Skills & Expertise
             </h3>
 
             {employeeSkills.length === 0 ? (
-              <p className="text-neutral-600">No skills assigned.</p>
+              <p>No skills assigned.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {employeeSkills.map((item) => (
-                  <div
-                    key={item._id}
-                    className="
-                      group relative p-6 rounded-xl border border-sky-200 bg-gradient-to-br 
-                      from-white to-sky-50/70 shadow-sm hover:shadow-xl hover:scale-[1.02]
-                      transition-all duration-300 backdrop-blur-sm
-                    "
-                  >
-                    {/* Skill Name + Proficiency */}
-                    <div className="flex justify-between items-center mb-4">
+                  <div key={item._id} className="bg-sky-50 p-6 rounded-xl border border-sky-200">
+                    <div className="flex justify-between mb-4">
                       <span className="text-xl font-semibold text-sky-900">
                         {item.skillId?.name}
                       </span>
-
-                      <span
-                        className="
-                          text-xs px-3 py-1 rounded-full
-                          bg-gradient-to-r from-sky-500 to-sky-700 text-white shadow-md
-                        "
-                      >
+                      <span className="text-xs px-3 py-1 rounded-full bg-sky-600 text-white">
                         Level {item.proficiency}
                       </span>
                     </div>
 
-                    {/* Animated Proficiency Bar */}
-                    <div className="w-full bg-sky-200/50 h-3 rounded-full overflow-hidden">
+                    <div className="w-full bg-sky-200 h-3 rounded-full overflow-hidden">
                       <div
-                        className="
-                          h-full bg-sky-600 rounded-full 
-                          transition-all duration-700 group-hover:bg-sky-700
-                        "
-                        style={{
-                          width: `${(item.proficiency / 5) * 100}%`
-                        }}
+                        className="h-full bg-sky-600"
+                        style={{ width: `${(item.proficiency / 5) * 100}%` }}
                       ></div>
                     </div>
-
-                    <p className="mt-3 text-sm text-sky-800 font-medium">
-                      Category: {item.skillId?.category}
-                    </p>
+                    <p className="mt-3 text-sm">Category: {item.skillId?.category}</p>
                   </div>
                 ))}
-
               </div>
             )}
           </div>
         )}
 
-        {/* TAB: PROJECT ALLOCATION */}
+        {/* PROJECT ALLOCATION TAB */}
         {activeTab === "projects" && (
-          <div className="bg-white p-8 rounded-2xl shadow-lg border border-sky-200 hover:shadow-xl transition duration-300">
-
-            {/* Header */}
-            <h3 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-sky-900">
-              <FolderKanban className="w-6 h-6 text-sky-700" />
-              Project Allocation Overview
+          <div className="bg-white p-8 rounded-xl shadow-xl border border-sky-200">
+            <h3 className="text-2xl font-semibold flex items-center gap-3 text-sky-900 mb-6">
+              <FolderKanban className="w-6 h-6" /> Project Allocation Overview
             </h3>
 
-            {/* Allocation Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {allocations.map((row) => (
-                <div
-                  key={row.project}
-                  className="
-                    group bg-sky-50/70 p-6 rounded-xl border border-sky-200 shadow-sm 
-                    hover:shadow-lg hover:bg-sky-100/80 
-                    transition-all duration-300 backdrop-blur-sm cursor-pointer
-                  "
-                >
-                  {/* Project Name */}
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-semibold">
-                      {row.project}
-                    </h4>
+              {employeeAllocations.map((item) => (
+                <div key={item._id} className="bg-sky-50 p-6 rounded-xl border border-sky-200">
+                  <h4 className="text-lg font-semibold">{item.project?.name}</h4>
 
-                    {/* Allocation Badge */}
-                    <span
-                      className="
-                        text-xs px-3 py-1 rounded-full bg-gradient-to-r 
-                        from-sky-400 to-sky-600 text-white shadow-md
-                      "
-                    >
-                      {row.allocation}
-                    </span>
-                  </div>
+                  <span className="text-xs px-3 py-1 rounded-full bg-sky-600 text-white">
+                    {item.allocation}%
+                  </span>
 
-                  {/* Animated Progress Bar */}
-                  <div className="w-full bg-sky-200/60 h-3 rounded-full overflow-hidden">
+                  <div className="w-full bg-sky-200 h-3 rounded-full mt-2">
                     <div
-                      className="
-                        h-full bg-sky-600 rounded-full 
-                        transition-all duration-700 group-hover:bg-sky-700
-                      "
-                      style={{
-                        width: row.allocation.replace("%", "") + "%",
-                      }}
+                      className="h-full bg-sky-600"
+                      style={{ width: `${item.allocation}%` }}
                     ></div>
                   </div>
 
-                  {/* Sub‑info */}
-                  <p className="mt-3 text-sm text-sky-800 font-medium">
-                    Estimated Workload Allocation
-                  </p>
+                  <p className="mt-3 text-sm text-sky-800">Workload Allocation</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-
-        {/* TAB: TIMESHEETS */}
+        {/* TIMESHEETS TAB */}
         {activeTab === "attendance" && (
-          <div className="bg-white p-8 rounded-2xl shadow-lg border border-sky-200 hover:shadow-xl transition duration-300">
-
-            {/* Section Title */}
+          <div className="bg-white p-8 rounded-xl border border-sky-200 shadow-xl">
             <h3 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-sky-900">
-              <Clock size={22} className="text-sky-700" />
-              Timesheet Summary
+              <Clock className="w-6 h-6" /> Timesheet Summary
             </h3>
 
-            {/* Timesheet List */}
-            <div className="space-y-4">
-              {timesheets.map((entry, index) => (
-                <div
-                  key={index}
-                  className="
-                    group p-5 bg-sky-50/60 border border-sky-200 rounded-xl 
-                    shadow-sm backdrop-blur-sm 
-                    hover:bg-sky-100 hover:shadow-lg 
-                    transition-all duration-300
-                  "
-                >
-                  {/* Date + Status */}
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-lg font-semibold">
-                      {entry.date}
-                    </h4>
-
-                    <span
-                      className={`
-                        px-3 py-1 rounded-full text-xs font-semibold shadow 
-                        ${
-                          entry.status === "Approved"
-                            ? "bg-green-300 text-green-900"
-                            : entry.status === "Pending"
-                            ? "bg-yellow-200 text-yellow-800"
-                            : "bg-neutral-200 text-neutral-700"
-                        }
-                      `}
-                    >
-                      {entry.status}
-                    </span>
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex justify-between items-center text-sm text-sky-900">
-                    <div className="flex flex-col">
-                      <span className="font-medium">{entry.project}</span>
-                      <span className="text-xs text-black">Project Name</span>
+            {timesheets.length === 0 ? (
+              <p className="text-sky-700">No timesheet entries found.</p>
+            ) : (
+              <div className="space-y-4">
+                {timesheets.map((entry) => (
+                  <div key={entry._id} className="p-5 bg-sky-50 border border-sky-200 rounded-xl">
+                    <div className="flex justify-between">
+                      <h4 className="font-semibold">{entry.date}</h4>
+                      <span className={`px-3 py-1 rounded-full text-xs ${
+                        entry.status === "Approved"
+                          ? "bg-green-200 text-green-800"
+                          : "bg-yellow-200 text-yellow-800"
+                      }`}>
+                        {entry.status}
+                      </span>
                     </div>
 
-                    <div className="flex flex-col items-end">
-                      <span className="font-semibold">{entry.hours}</span>
-                      <span className="text-xs text-black">Hours Logged</span>
+                    <div className="flex justify-between mt-2">
+                      <div>
+                        <p className="font-medium">{entry.project?.name}</p>
+                        <p className="text-xs text-neutral-700">Project Name</p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-semibold">{entry.hours}h</p>
+                        <p className="text-xs text-neutral-700">Hours Logged</p>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Progress Bar Animation */}
-                  <div className="w-full bg-sky-200/50 h-2 mt-4 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-sky-600 rounded-full group-hover:bg-sky-700 transition-all duration-700"
-                    style={{
-                      width: `${(Number(entry.hours.replace("h", "")) / 8) * 100}%`,
-                    }}
-                  ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-
-        {/* TAB: PAYROLL */}
+        {/* PAYROLL TAB */}
         {activeTab === "payroll" && (
-          <div className="bg-white p-8 rounded-2xl shadow-lg border border-sky-200 hover:shadow-xl transition duration-300">
-
+          <div className="bg-white p-8 rounded-xl border border-sky-200 shadow-xl">
             <h3 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-sky-900">
-              <DollarSign size={22} className="text-sky-700" />
-              Payroll Summary
+              <DollarSign size={22} className="text-sky-700" /> Payroll Summary
             </h3>
 
-            {/* Salary Card */}
-            <div
-              className="
-                bg-gradient-to-r from-sky-500 to-sky-700 
-                text-white p-6 rounded-xl shadow-md 
-                flex items-center justify-between
-                hover:shadow-xl transition duration-300
-              "
-            >
-              <div>
-                <p className="text-sm opacity-80">Monthly Compensation</p>
-                <p className="text-3xl font-bold mt-1">
-                  ₹{profile.costPerMonth?.toLocaleString()}
-                </p>
-              </div>
-
-              <DollarSign className="w-10 h-10 opacity-50" />
-            </div>
-
-            {/* Additional Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-
-              {/* Tax */}
-              <div className="p-6 bg-sky-50/70 border border-sky-200 rounded-xl shadow-sm hover:shadow-md transition">
-                <h4 className="text-lg font-semibold text-sky-900">Tax & Deductions</h4>
-                <p className="text-sky-700 text-sm mt-2">Auto‑calculated monthly</p>
-                <p className="font-semibold text-neutral-800 mt-3">Coming Soon…</p>
-              </div>
-
-              {/* Breakdown */}
-              <div className="p-6 bg-sky-50/70 border border-sky-200 rounded-xl shadow-sm hover:shadow-md transition">
-                <h4 className="text-lg font-semibold text-sky-900">Salary Structure</h4>
-
-                <div className="space-y-2 mt-2 text-sm">
-                  <p className="text-neutral-700">Basic Salary — Coming Soon</p>
-                  <p className="text-neutral-700">HRA — Coming Soon</p>
-                  <p className="text-neutral-700">Special Allowance — Coming Soon</p>
+            {payroll ? (
+              <>
+                <div className="bg-sky-600 text-white p-6 rounded-xl shadow-md flex justify-between">
+                  <div>
+                    <p className="text-sm opacity-80">Monthly Compensation</p>
+                    <p className="text-3xl font-bold mt-1">
+                      ₹{payroll.monthlySalary?.toLocaleString()}
+                    </p>
+                  </div>
+                  <DollarSign className="w-10 h-10 opacity-40" />
                 </div>
-              </div>
-
-            </div>
+              </>
+            ) : (
+              <p>No payroll data available.</p>
+            )}
           </div>
         )}
 
-        {/* TAB: DOCUMENTS */}
+        {/* DOCUMENTS TAB */}
         {activeTab === "documents" && (
-          <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200 hover:shadow-lg transition">
+          <div className="bg-white p-6 rounded-xl border border-sky-200 shadow-xl">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-sky-900">
               <FileText size={20} /> Documents
             </h3>
 
+            {/* UPLOAD */}
             <div
               {...getRootProps()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-                isDragActive ? "bg-sky-100 border-sky-400" : "bg-sky-50 border-sky-300"
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer ${
+                isDragActive
+                  ? "bg-sky-100 border-sky-400"
+                  : "bg-sky-50 border-sky-300"
               }`}
             >
               <input {...getInputProps()} />
               <Upload size={34} className="mx-auto mb-3 text-sky-700" />
-              <p className="text-black">Drag & drop documents here</p>
-              <p className="text-sm text-black">PDF, PNG, DOCX</p>
+              <p>Drag & drop documents here</p>
+              <p className="text-sm">PDF, PNG, DOCX</p>
+            </div>
+
+            {/* DOCUMENT LIST */}
+            <div className="mt-6 space-y-3">
+              {documents.length === 0 ? (
+                <p>No documents uploaded.</p>
+              ) : (
+                documents.map((d) => (
+                  <a
+                    key={d._id}
+                    href={d.fileUrl}
+                    target="_blank"
+                    className="block bg-sky-50 px-4 py-2 rounded-lg border border-sky-200"
+                  >
+                    {d.name}
+                  </a>
+                ))
+              )}
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

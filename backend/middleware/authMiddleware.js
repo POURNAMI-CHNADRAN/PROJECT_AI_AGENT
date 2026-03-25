@@ -84,3 +84,14 @@ export const allowEmployeeStatusUpdate = (req, res, next) => {
 
   next();
 };
+
+
+export const adminOrHROnly = (req, res, next) => {
+  if (["Admin", "HR"].includes(req.user.role)) return next();
+  return res.status(403).json({ message: "Admin/HR Only" });
+};
+
+export const employeeOnly = (req, res, next) => {
+  if (req.user.role === "Employee") return next();
+  return res.status(403).json({ message: "Employees Only" });
+};

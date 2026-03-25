@@ -9,7 +9,9 @@ import {
   Trash2,
 } from "lucide-react";
 
-/* ================= TYPES ================= */
+/* ============================================================
+   TYPES — MATCH EXACT BACKEND SHAPE
+============================================================ */
 
 type Story = {
   _id: string;
@@ -17,7 +19,10 @@ type Story = {
   description: string;
   story_points: number;
   status: "TO_DO" | "IN_PROGRESS" | "DONE";
+
+  // backend sends project_id, not project
   project_id?: { _id: string; name: string } | string;
+
   assigned_employee?: { _id: string; name: string } | string;
 };
 
@@ -33,18 +38,22 @@ type NewStory = {
   status: "TO_DO" | "IN_PROGRESS" | "DONE";
 };
 
-/* ================= MAIN COMPONENT ================= */
+/* ============================================================
+   MAIN COMPONENT
+============================================================ */
 
 export default function Stories() {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
-  const token = localStorage.getItem("token");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+  const token = localStorage.getItem("token") || "";
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const role = user.role;
-  const isAdminOrHR = role === "Admin" || role === "HR";
+  const isAdmin = role === "Admin";
+  const isHR = role === "HR";
+  const isEmployee = role === "Employee";
+  const isAdminOrHR = isAdmin || isHR;
 
-  /* ================= STATES ================= */
-
+  /* STATES */
   const [stories, setStories] = useState<Story[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -68,25 +77,30 @@ export default function Stories() {
 
   const [editStory, setEditStory] = useState<Story | null>(null);
 
-  /* ================= SAFE JSON ================= */
-
+  /* ============================================================
+     SAFE JSON
+  ============================================================ */
   const safeJson = async (res: Response) => {
-    const txt = await res.text();
+    const text = await res.text();
     try {
-      return JSON.parse(txt);
+      return JSON.parse(text);
     } catch {
-      console.error("Server returned non‑JSON:\n\n", txt);
+      console.error("Non-JSON Response:", text);
       throw new Error("Invalid JSON");
     }
   };
 
-  /* ================= LOAD DATA ================= */
+  /* ============================================================
+     LOAD STORIES
+  ============================================================ */
 
   const loadStories = async () => {
     try {
       setLoading(true);
-      const endpoint =
-        role === "Employee" ? "/api/stories/assigned" : "/api/stories";
+
+      const endpoint = isEmployee
+        ? "/api/stories/assigned"
+        : "/api/stories";
 
       const res = await fetch(API_BASE + endpoint, {
         headers: { Authorization: `Bearer ${token}` },
@@ -108,6 +122,7 @@ export default function Stories() {
   };
 
   const loadEmployees = async () => {
+    if (!isAdminOrHR) return; // ONLY ADMIN/HR
     const res = await fetch(API_BASE + "/api/employees", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -116,14 +131,14 @@ export default function Stories() {
   };
 
   useEffect(() => {
-    if (!token) return;
     loadStories();
     loadProjects();
     loadEmployees();
-  }, [token, role]);
+  }, [role]);
 
-  /* ================= DELETE STORY ================= */
-
+  /* ============================================================
+     DELETE STORY
+  ============================================================ */
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this story?")) return;
 
@@ -134,43 +149,47 @@ export default function Stories() {
 
     const json = await safeJson(res);
     if (!res.ok) return alert(json.error || "Failed to delete");
-
     loadStories();
   };
 
-  /* ================= FILTER LIST ================= */
-
+  /* ============================================================
+     FILTERED LIST
+  ============================================================ */
   const filteredStories = useMemo(() => {
     return stories.filter((s) => {
-      let pass = true;
-
-      if (statusFilter !== "All" && s.status !== statusFilter) pass = false;
+      if (statusFilter !== "All" && s.status !== statusFilter) return false;
 
       if (projectFilter !== "All") {
-        const projID =
-          typeof s.project_id === "object" ? s.project_id._id : s.project_id;
-        if (projID !== projectFilter) pass = false;
+        const pid =
+          typeof s.project_id === "object"
+            ? s.project_id._id
+            : s.project_id;
+
+        if (pid !== projectFilter) return false;
       }
 
-      if (assignedFilter !== "All") {
-        const empID =
+      if (assignedFilter !== "All" && isAdminOrHR) {
+        const aid =
           typeof s.assigned_employee === "object"
             ? s.assigned_employee._id
             : s.assigned_employee;
-        if (empID !== assignedFilter) pass = false;
+
+        if (aid !== assignedFilter) return false;
       }
 
-      return pass;
+      return true;
     });
   }, [stories, statusFilter, projectFilter, assignedFilter]);
 
-  /* ================= UI ================= */
+  /* ============================================================
+     UI
+  ============================================================ */
 
   return (
     <div className="w-full min-h-screen bg-sky-50 py-8">
       <div className="max-w-6xl mx-auto px-4 space-y-8">
 
-        {/* ---------- HEADER ---------- */}
+        {/* HEADER */}
         <div className="bg-sky-200 p-7 rounded-xl shadow-lg text-sky-900 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="bg-white w-12 h-12 rounded-lg flex items-center justify-center shadow-md border">
@@ -205,7 +224,7 @@ export default function Stories() {
           )}
         </div>
 
-        {/* ---------- FILTERS ---------- */}
+        {/* FILTERS */}
         <div className="bg-white border border-sky-200 rounded-xl shadow-sm p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <FilterBox
             label="Status"
@@ -222,7 +241,10 @@ export default function Stories() {
             setValue={setProjectFilter}
             options={[
               "All",
-              ...projects.map((p) => ({ label: p.name, value: p._id })),
+              ...projects.map((p: Project) => ({
+                label: p.name,
+                value: p._id,
+              })),
             ]}
           />
 
@@ -234,7 +256,7 @@ export default function Stories() {
               setValue={setAssignedFilter}
               options={[
                 "All",
-                ...employees.map((e) => ({
+                ...employees.map((e: Employee) => ({
                   label: e.name,
                   value: e._id,
                 })),
@@ -243,7 +265,7 @@ export default function Stories() {
           )}
         </div>
 
-        {/* ---------- TABLE ---------- */}
+        {/* TABLE */}
         <div className="bg-white rounded-xl border border-sky-200 shadow-sm p-4">
           {loading ? (
             <p className="text-center text-sky-700 py-10">Loading...</p>
@@ -269,32 +291,35 @@ export default function Stories() {
                     className="border-b hover:bg-sky-50 transition"
                   >
                     <td className="py-2 px-3">{s.title}</td>
-                    <td className="py-2 px-3 text-center">{s.story_points}</td>
 
+                    <td className="py-2 px-3 text-center">
+                      {s.story_points}
+                    </td>
+
+                    {/* EMPLOYEE */}
                     <td className="py-2 px-3 text-center">
                       {typeof s.assigned_employee === "object"
-                        ? s.assigned_employee.name
+                        ? s.assigned_employee?.name
                         : "—"}
                     </td>
 
+                    {/* PROJECT */}
                     <td className="py-2 px-3 text-center">
                       {typeof s.project_id === "object"
-                        ? s.project_id.name
+                        ? s.project_id?.name
                         : "—"}
                     </td>
 
+                    {/* STATUS */}
                     <td className="py-2 px-3 text-center">
                       <span
-                        className={`
-                        px-3 py-1 rounded-full text-xs font-semibold
-                        ${
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           s.status === "TO_DO"
                             ? "bg-gray-100 text-gray-700"
                             : s.status === "IN_PROGRESS"
                             ? "bg-yellow-100 text-yellow-700"
                             : "bg-green-100 text-green-700"
-                        }
-                      `}
+                        }`}
                       >
                         {s.status.replace("_", " ")}
                       </span>
@@ -302,8 +327,10 @@ export default function Stories() {
 
                     {/* ACTIONS */}
                     <td className="py-2 px-3 text-center">
+
+                      {/* ADMIN/HR */}
                       {isAdminOrHR && (
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex justify-center gap-3">
                           <button
                             onClick={() => {
                               setEditStory(s);
@@ -314,8 +341,7 @@ export default function Stories() {
                             <Edit size={16} />
                           </button>
 
-                          {(role === "Admin" ||
-                            (role === "HR" && s.status === "TO_DO")) && (
+                          {isAdmin && (
                             <button
                               onClick={() => handleDelete(s._id)}
                               className="text-red-600"
@@ -326,18 +352,22 @@ export default function Stories() {
                         </div>
                       )}
 
-                      {role === "Employee" && (
-                        <button
-                          onClick={() => {
-                            setEditStory(s);
-                            setShowEditModal(true);
-                          }}
-                          className="text-sky-700 underline text-xs"
-                        >
-                          Update Status
-                        </button>
-                      )}
-                    </td>
+                      {/* EMPLOYEE — only update status of own story */}
+                      {isEmployee &&
+                        ((typeof s.assigned_employee === "object"
+                          ? s.assigned_employee._id
+                          : s.assigned_employee) === user.id) && (
+                            <button
+                              onClick={() => {
+                                setEditStory(s);
+                                setShowEditModal(true);
+                              }}
+                              className="text-sky-700 underline text-xs"
+                            >
+                              Update Status
+                            </button>
+                        )}
+                      </td>
                   </tr>
                 ))}
               </tbody>
@@ -345,9 +375,9 @@ export default function Stories() {
           )}
         </div>
 
-        {/* ---------- ADD STORY MODAL ---------- */}
+        {/* ADD MODAL */}
         {showAddModal && (
-          <Modal
+          <StoryModal
             title="Add Story"
             story={newStory}
             setStory={setNewStory}
@@ -356,17 +386,16 @@ export default function Stories() {
             role={role}
             onClose={() => setShowAddModal(false)}
             onSubmit={async () => {
-              if (!newStory.title.trim())
-                return alert("Title is required");
-              if (!newStory.project_id)
-                return alert("Project is required");
+              if (!newStory.title.trim()) return alert("Title required");
+              if (!newStory.project_id) return alert("Project required");
               if (!newStory.story_points)
-                return alert("Story points are required");
+                return alert("Story points required");
 
               const payload = {
                 ...newStory,
                 story_points: Number(newStory.story_points),
-                assigned_employee: newStory.assigned_employee || null,
+                assigned_employee:
+                  newStory.assigned_employee || null,
               };
 
               const res = await fetch(`${API_BASE}/api/stories`, {
@@ -379,8 +408,8 @@ export default function Stories() {
               });
 
               if (!res.ok) {
-                const err = await safeJson(res).catch(() => null);
-                alert(err?.error || "Failed to create");
+                const err = await safeJson(res);
+                alert(err.error || "Failed to create");
                 return;
               }
 
@@ -390,10 +419,10 @@ export default function Stories() {
           />
         )}
 
-        {/* ---------- EDIT STORY MODAL ---------- */}
+        {/* EDIT MODAL */}
         {showEditModal && editStory && (
-          <Modal
-            title={role === "Employee" ? "Update Status" : "Edit Story"}
+          <StoryModal
+            title={isEmployee ? "Update Status" : "Edit Story"}
             story={editStory}
             setStory={setEditStory}
             projects={projects}
@@ -401,10 +430,17 @@ export default function Stories() {
             role={role}
             onClose={() => setShowEditModal(false)}
             onSubmit={async () => {
+              if (!editStory) return;
+
               const payload = {
                 ...editStory,
                 story_points: Number(editStory.story_points),
-                assigned_employee: editStory.assigned_employee || null,
+                assigned_employee:
+                  editStory.assigned_employee || null,
+                project_id:
+                  typeof editStory.project_id === "object"
+                    ? editStory.project_id._id
+                    : editStory.project_id,
               };
 
               const res = await fetch(
@@ -434,9 +470,11 @@ export default function Stories() {
   );
 }
 
-/* ================= MODAL COMPONENT ================= */
+/* ============================================================
+   MODAL COMPONENT
+============================================================ */
 
-function Modal({
+function StoryModal({
   title,
   story,
   setStory,
@@ -447,8 +485,8 @@ function Modal({
   onSubmit,
 }: any) {
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-xl w-[450px] shadow-lg border space-y-4 animate-scale-in">
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+      <div className="bg-white p-6 rounded-xl w-[450px] shadow-lg border space-y-4">
 
         <h2 className="text-xl font-bold text-sky-800">{title}</h2>
 
@@ -480,7 +518,9 @@ function Modal({
   );
 }
 
-/* ================= FILTERBOX ================= */
+/* ============================================================
+   FILTER BOX
+============================================================ */
 
 function FilterBox({
   label,
@@ -496,22 +536,20 @@ function FilterBox({
   options: (string | { label: string; value: string })[];
 }) {
   return (
-    <div className="flex flex-col gap-1 w-full">
+    <div className="flex flex-col gap-1">
       <span className="text-xs font-semibold text-sky-700">{label}</span>
 
       <div className="flex items-center gap-2 bg-white border border-sky-300 rounded-lg px-3 py-2 shadow-sm">
-        <div className="text-sky-600">{icon}</div>
+        <div>{icon}</div>
 
         <select
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="w-full outline-none bg-transparent text-sm text-sky-900"
         >
-          {options.map((opt) =>
+          {options.map((opt: any) =>
             typeof opt === "string" ? (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
+              <option key={opt}>{opt}</option>
             ) : (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -524,7 +562,9 @@ function FilterBox({
   );
 }
 
-/* ================= SHARED FIELDS ================= */
+/* ============================================================
+   MODAL FIELDS
+============================================================ */
 
 function ModalFields({
   story,
@@ -532,117 +572,118 @@ function ModalFields({
   projects,
   employees,
   role,
-}: {
-  story: any;
-  setStory: any;
-  projects: Project[];
-  employees: Employee[];
-  role: string;
-}) {
+}: any) {
   return (
     <div className="space-y-3">
+
+      {/* ADMIN + HR FIELDS */}
       {(role === "Admin" || role === "HR") && (
-        <div>
-          <label className="text-sm text-sky-700 font-medium">Title</label>
-          <input
-            value={story.title}
-            onChange={(e) =>
-              setStory({ ...story, title: e.target.value })
-            }
-            className="w-full border p-2 rounded"
-          />
-        </div>
+        <>
+          <div>
+            <label className="text-sm font-medium">Title</label>
+            <input
+              value={story.title}
+              onChange={(e) =>
+                setStory({ ...story, title: e.target.value })
+              }
+              className="w-full border p-2 rounded"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Description</label>
+            <textarea
+              value={story.description}
+              onChange={(e) =>
+                setStory({ ...story, description: e.target.value })
+              }
+              className="w-full border p-2 rounded"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Story Points</label>
+            <input
+              type="number"
+              value={story.story_points}
+              onChange={(e) =>
+                setStory({
+                  ...story,
+                  story_points: Number(e.target.value),
+                })
+              }
+              className="w-full border p-2 rounded"
+            />
+          </div>
+
+          {/* PROJECT SELECT */}
+          <div>
+            <label className="text-sm font-medium">Project</label>
+            <select
+              value={
+                typeof story.project_id === "object"
+                  ? story.project_id._id
+                  : story.project_id
+              }
+              onChange={(e) =>
+                setStory({ ...story, project_id: e.target.value })
+              }
+              className="w-full border p-2 rounded"
+            >
+              <option value="">Select Project</option>
+              {projects.map((p: Project) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ASSIGNED EMPLOYEE */}
+          <div>
+            <label className="text-sm font-medium">Assigned To</label>
+            <select
+              value={
+                typeof story.assigned_employee === "object"
+                  ? story.assigned_employee._id
+                  : story.assigned_employee
+              }
+              onChange={(e) =>
+                setStory({
+                  ...story,
+                  assigned_employee: e.target.value,
+                })
+              }
+              className="w-full border p-2 rounded"
+            >
+              <option value="">Unassigned</option>
+              {employees.map((emp: Employee) => (
+                <option key={emp._id} value={emp._id}>
+                  {emp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
       )}
 
-      {(role === "Admin" || role === "HR") && (
+      {/* EMPLOYEE ONLY — STATUS */}
+      {role === "Employee" && (
         <div>
-          <label className="text-sm text-sky-700 font-medium">Description</label>
-          <textarea
-            value={story.description}
-            onChange={(e) =>
-              setStory({ ...story, description: e.target.value })
-            }
-            className="w-full border p-2 rounded"
-          />
-        </div>
-      )}
-
-      {(role === "Admin" || role === "HR") && (
-        <div>
-          <label className="text-sm text-sky-700 font-medium">Story Points</label>
-          <input
-            type="number"
-            value={story.story_points}
-            onChange={(e) =>
-              setStory({ ...story, story_points: Number(e.target.value) })
-            }
-            className="w-full border p-2 rounded"
-          />
-        </div>
-      )}
-
-      {(role === "Admin" || role === "HR") && (
-        <div>
-          <label className="text-sm text-sky-700 font-medium">Project</label>
+          <label className="text-sm font-medium">Update Status</label>
           <select
-            value={
-              typeof story.project_id === "object"
-                ? story.project_id._id
-                : story.project_id
-            }
+            value={story.status}
             onChange={(e) =>
-              setStory({ ...story, project_id: e.target.value })
+              setStory({ ...story, status: e.target.value })
             }
             className="w-full border p-2 rounded"
           >
-            <option value="">Select Project</option>
-            {projects.map((p) => (
-              <option key={p._id} value={p._id}>
-                {p.name}
-              </option>
-            ))}
+            <option value="TO_DO">TO DO</option>
+            <option value="IN_PROGRESS">IN PROGRESS</option>
+            <option value="DONE">DONE</option>
           </select>
         </div>
       )}
-
-      {(role === "Admin" || role === "HR") && (
-        <div>
-          <label className="text-sm text-sky-700 font-medium">Assigned To</label>
-          <select
-            value={
-              typeof story.assigned_employee === "object"
-                ? story.assigned_employee._id
-                : story.assigned_employee
-            }
-            onChange={(e) =>
-              setStory({ ...story, assigned_employee: e.target.value })
-            }
-            className="w-full border p-2 rounded"
-          >
-            <option value="">Unassigned</option>
-            {employees.map((emp) => (
-              <option key={emp._id} value={emp._id}>
-                {emp.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div>
-        <label className="text-sm text-sky-700 font-medium">Status</label>
-        <select
-          value={story.status}
-          onChange={(e) =>
-            setStory({ ...story, status: e.target.value })
-          }
-          className="w-full border p-2 rounded"
-        >
-          <option value="TO_DO">TO_DO</option>
-          <option value="IN_PROGRESS">IN_PROGRESS</option>
-          <option value="DONE">DONE</option>
-        </select>
-      </div>
     </div>
   );
 }

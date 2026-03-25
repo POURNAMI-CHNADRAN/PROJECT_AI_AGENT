@@ -1,22 +1,35 @@
+import mongoose from "mongoose";
 import Story from "../models/Story.js";
 
-// CREATE STORY (Admin + HR)
+/* ============================================================
+   CREATE STORY (Admin + HR)
+============================================================ */
 export const create = async (req, res) => {
   try {
-    if (!req.body.project_id || !req.body.title || !req.body.story_points) {
+    const { project_id, title, story_points } = req.body;
+
+    if (!project_id || !title || !story_points) {
       return res.status(400).json({
         error: "project_id, title, and story_points are required"
       });
     }
 
     const story = await Story.create(req.body);
-    res.status(201).json({ success: true, data: story });
+
+    const populated = await Story.findById(story._id)
+      .populate("project_id", "name")
+      .populate("assigned_employee", "name");
+
+    res.status(201).json({ success: true, data: populated });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// GET ALL STORIES (Admin + HR)
+
+/* ============================================================
+   GET ALL STORIES (Admin + HR)
+============================================================ */
 export const getAll = async (req, res) => {
   try {
     const stories = await Story.find()
@@ -29,24 +42,31 @@ export const getAll = async (req, res) => {
   }
 };
 
-// EMPLOYEE: GET ONLY ASSIGNED STORIES
+
+/* ============================================================
+   GET ONLY ASSIGNED STORIES (Employee)
+============================================================ */
 export const getAssignedStories = async (req, res) => {
   try {
-    console.log("User ID:", req.user.id);
+    const employeeId = new mongoose.Types.ObjectId(req.user.id);
 
-    const allStories = await Story.find();
+    const stories = await Story.find({ assigned_employee: employeeId })
+      .populate("project_id", "name")
+      .populate("assigned_employee", "name");
 
-    const stories = await Story.find({
-      assigned_employee: req.user.id   
+    return res.json({ success: true, data: stories });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
     });
-
-    res.json({ success: true, data: stories });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
 };
 
-// GET ONE STORY
+
+/* ============================================================
+   GET ONE STORY
+============================================================ */
 export const getOne = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id)
@@ -55,9 +75,11 @@ export const getOne = async (req, res) => {
 
     if (!story) return res.status(404).json({ error: "Story NOT Found" });
 
-    // Employee restriction: only see their own stories
-    if (req.user.role === "Employee" &&
-        String(story.assigned_employee) !== String(req.user.id)) {
+    // EMPLOYEE restriction — only own stories
+    if (
+      req.user.role === "Employee" &&
+      String(story.assigned_employee?._id) !== String(req.user.id)
+    ) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
@@ -67,22 +89,31 @@ export const getOne = async (req, res) => {
   }
 };
 
-// UPDATE STORY
+
+/* ============================================================
+   UPDATE STORY
+============================================================ */
 export const update = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
+
     if (!story) return res.status(404).json({ error: "Story NOT Found" });
 
-    // Employee check — they can only update status
+    // EMPLOYEE restriction — can only update status
     if (req.user.role === "Employee") {
-      if (String(story.assigned_employee) !== String(req.user.id)) {
+      if (String(story.assigned_employee?._id) !== String(req.user.id)) {
         return res.status(403).json({ error: "Forbidden" });
       }
+
+      // force employees to update ONLY status
+      req.body = { status: req.body.status };
     }
 
     const updated = await Story.findByIdAndUpdate(req.params.id, req.body, {
-      new: true
-    });
+      new: true,
+    })
+      .populate("project_id", "name")
+      .populate("assigned_employee", "name");
 
     res.json({ success: true, data: updated });
   } catch (err) {
@@ -90,13 +121,16 @@ export const update = async (req, res) => {
   }
 };
 
-// DELETE STORY
+
+/* ============================================================
+   DELETE STORY
+============================================================ */
 export const remove = async (req, res) => {
   try {
     const story = await Story.findById(req.params.id);
     if (!story) return res.status(404).json({ error: "Story NOT Found" });
 
-    // HR only allowed if story is TODO
+    // HR rule — only delete TO_DO
     if (req.user.role === "HR" && story.status !== "TO_DO") {
       return res.status(403).json({
         error: "HR can delete only TO-DO stories"
