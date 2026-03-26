@@ -106,6 +106,18 @@ export const rejectTimesheet = async (req, res) => {
   }
 };
 
+export const getTimesheetsByEmployee = async (req, res) => {
+  try {
+    const ts = await Timesheet.find({ employee_id: req.params.id })
+      .populate("project_id", "name")
+      .populate("story_id", "title story_points");
+
+    res.json({ success: true, data: ts });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 //
 // 4️⃣ GET HISTORY
 //

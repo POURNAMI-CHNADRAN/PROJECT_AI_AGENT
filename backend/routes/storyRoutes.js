@@ -8,13 +8,14 @@ import {
   remove,
 } from "../controllers/storyController.js";
 
-import { protect, adminOrHROnly, employeeOnly } from "../middleware/authMiddleware.js";
+import { protect, adminOrHROnly, employeeOnly, allowRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Admin + HR
 router.post("/", protect, adminOrHROnly, create);
-router.get("/", protect, adminOrHROnly, getAll);
+
+router.get("/", protect, allowRoles("Admin", "HR", "Employee"), getAll);
 
 // Employee — assigned stories only
 router.get("/assigned", protect, employeeOnly, getAssignedStories);

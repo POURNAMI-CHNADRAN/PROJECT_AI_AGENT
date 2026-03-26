@@ -1,25 +1,61 @@
 import Project from "../models/Project.js";
+import Story from "../models/Story.js";
+import mongoose from "mongoose";
 
-// GET ALL PROJECTS
 export const getAll = async (req, res) => {
   try {
-    let filter = {};
+    let projects = [];
 
-    // Employees only view projects assigned to them
     if (req.user.role === "Employee") {
-      filter = { assignedTo: req.user._id };
+
+      // 1️⃣ Projects directly assigned
+      const assignedProjects = await Project.find({
+        assignedTo: new mongoose.Types.ObjectId(req.user.id),
+      });
+
+      // 2️⃣ Projects from assigned stories
+      const stories = await Story.find({
+        "assigned_employee._id": new mongoose.Types.ObjectId(req.user.id),
+      });
+
+      const storyProjectIds = stories.map((s) =>
+        typeof s.project_id === "object"
+          ? s.project_id._id
+          : s.project_id
+      );
+
+      const storyProjects = await Project.find({
+        _id: { $in: storyProjectIds },
+      });
+
+      // 3️⃣ Merge + remove duplicates
+      const map = new Map();
+
+      [...assignedProjects, ...storyProjects].forEach((p) =>
+        map.set(p._id.toString(), p)
+      );
+
+      projects = Array.from(map.values());
+
+    } else {
+      projects = await Project.find();
     }
 
-    const data = await Project.find(filter)
-      .populate("client_id", "client_name");
+    // populate after filtering
+    const data = await Project.populate(projects, [
+      { path: "client_id", select: "client_name" },
+      { path: "assignedTo", select: "name" },
+    ]);
 
     res.json({ success: true, data });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+  console.error("PROJECT API ERROR:", error);
+  res.status(500).json({ success: false, message: error.message });
 
+  console.log("USER ID TYPE:", typeof req.user.id);
+}
+};
 
 // GET ONE PROJECT
 export const getOne = async (req, res) => {

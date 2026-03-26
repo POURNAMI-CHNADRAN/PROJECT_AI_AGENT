@@ -3,7 +3,8 @@ import {
   submitTimesheet,
   approveTimesheet,
   rejectTimesheet,
-  getTimesheetHistory
+  getTimesheetHistory,
+  getTimesheetsByEmployee
 } from "../controllers/timesheetController.js";
 
 import {
@@ -23,7 +24,10 @@ router.put("/approve/:id", protect, adminOrHROnly, approveTimesheet);
 // HR / Admin rejects
 router.put("/reject/:id", protect, adminOrHROnly, rejectTimesheet);
 
-// Timesheet history
+// Employee gets their own timesheets — REQUIRED for MyProfile.tsx
+router.get("/employee/:id", protect, getTimesheetsByEmployee);
+
+// HR/Admin history
 router.get("/", protect, adminOrHROnly, getTimesheetHistory);
 
 export default router;

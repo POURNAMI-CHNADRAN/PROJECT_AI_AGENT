@@ -17,7 +17,7 @@ export const protect = async (req, res, next) => {
     console.log("DECODED TOKEN:", decoded); // ✅ move here
 
     // 🔥 IMPORTANT FIX (support both id and _id)
-    const user = await Employee.findById(decoded._id || decoded.id).select("-password");
+    const user = await Employee.findById(decoded.id).select("-password");
 
     if (!user) {
       return res.status(401).json({ message: "User NOT Found" });

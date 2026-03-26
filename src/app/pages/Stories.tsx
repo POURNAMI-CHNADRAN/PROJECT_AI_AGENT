@@ -19,14 +19,11 @@ type Story = {
   description: string;
   story_points: number;
   status: "TO_DO" | "IN_PROGRESS" | "DONE";
-
-  // backend sends project_id, not project
   project_id?: { _id: string; name: string } | string;
-
   assigned_employee?: { _id: string; name: string } | string;
 };
 
-type Project = { _id: string; name: string };
+type Project = { _id: string; name: string; assignedTo?: string };
 type Employee = { _id: string; name: string };
 
 type NewStory = {
@@ -52,6 +49,8 @@ export default function Stories() {
   const isHR = role === "HR";
   const isEmployee = role === "Employee";
   const isAdminOrHR = isAdmin || isHR;
+
+  const userId = user.id; // FINAL CONFIRMED FIX
 
   /* STATES */
   const [stories, setStories] = useState<Story[]>([]);
@@ -118,11 +117,30 @@ export default function Stories() {
       headers: { Authorization: `Bearer ${token}` },
     });
     const json = await safeJson(res);
-    setProjects(json.data || json);
+
+    let list = [];
+
+    // If backend returns a single project object:
+    if (json.data && !Array.isArray(json.data)) {
+      list = [json.data];
+    }
+    else if (Array.isArray(json.data)) {
+      list = json.data;
+    }
+    else {
+      list = [];
+    }
+
+    // Employee sees only their project(s)
+    if (isEmployee) {
+      setProjects(list.filter((p: any) => p.assignedTo === userId));
+    } else {
+      setProjects(list);
+    }
   };
 
   const loadEmployees = async () => {
-    if (!isAdminOrHR) return; // ONLY ADMIN/HR
+    if (!isAdminOrHR) return;
     const res = await fetch(API_BASE + "/api/employees", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -225,30 +243,31 @@ export default function Stories() {
         </div>
 
         {/* FILTERS */}
-        <div className="bg-white border border-sky-200 rounded-xl shadow-sm p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <FilterBox
-            label="Status"
-            icon={<Filter className="text-sky-600" />}
-            value={statusFilter}
-            setValue={setStatusFilter}
-            options={["All", "TO_DO", "IN_PROGRESS", "DONE"]}
-          />
+        {isAdminOrHR && (
+          <div className="bg-white border border-sky-200 rounded-xl shadow-sm p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          <FilterBox
-            label="Project"
-            icon={<Briefcase className="text-sky-600" />}
-            value={projectFilter}
-            setValue={setProjectFilter}
-            options={[
-              "All",
-              ...projects.map((p: Project) => ({
-                label: p.name,
-                value: p._id,
-              })),
-            ]}
-          />
+            <FilterBox
+              label="Status"
+              icon={<Filter className="text-sky-600" />}
+              value={statusFilter}
+              setValue={setStatusFilter}
+              options={["All", "TO_DO", "IN_PROGRESS", "DONE"]}
+            />
 
-          {isAdminOrHR && (
+            <FilterBox
+              label="Project"
+              icon={<Briefcase className="text-sky-600" />}
+              value={projectFilter}
+              setValue={setProjectFilter}
+              options={[
+                "All",
+                ...projects.map((p: Project) => ({
+                  label: p.name,
+                  value: p._id,
+                })),
+              ]}
+            />
+
             <FilterBox
               label="Assigned To"
               icon={<Users className="text-sky-600" />}
@@ -262,9 +281,9 @@ export default function Stories() {
                 })),
               ]}
             />
-          )}
-        </div>
 
+          </div>
+        )}
         {/* TABLE */}
         <div className="bg-white rounded-xl border border-sky-200 shadow-sm p-4">
           {loading ? (
@@ -352,22 +371,24 @@ export default function Stories() {
                         </div>
                       )}
 
-                      {/* EMPLOYEE — only update status of own story */}
+                      {/* EMPLOYEE — icon update */}
                       {isEmployee &&
                         ((typeof s.assigned_employee === "object"
                           ? s.assigned_employee._id
-                          : s.assigned_employee) === user.id) && (
-                            <button
-                              onClick={() => {
-                                setEditStory(s);
-                                setShowEditModal(true);
-                              }}
-                              className="text-sky-700 underline text-xs"
-                            >
-                              Update Status
-                            </button>
+                          : s.assigned_employee) === userId) && (
+                          <button
+                            onClick={() => {
+                              setEditStory(s);
+                              setShowEditModal(true);
+                            }}
+                            className="p-2 bg-sky-600 text-white rounded-full shadow 
+                                      hover:bg-sky-700 hover:shadow-lg transition-all"
+                            title="Update Status"
+                          >
+                            <Edit size={16} className="text-white" />
+                          </button>
                         )}
-                      </td>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -573,10 +594,12 @@ function ModalFields({
   employees,
   role,
 }: any) {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = user.id;
+
   return (
     <div className="space-y-3">
 
-      {/* ADMIN + HR FIELDS */}
       {(role === "Admin" || role === "HR") && (
         <>
           <div>
@@ -631,11 +654,16 @@ function ModalFields({
               className="w-full border p-2 rounded"
             >
               <option value="">Select Project</option>
-              {projects.map((p: Project) => (
-                <option key={p._id} value={p._id}>
-                  {p.name}
-                </option>
-              ))}
+
+              {projects
+                .filter((p: any) =>
+                  role === "Employee" ? p.assignedTo === userId : true
+                )
+                .map((p: Project) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </div>
 
