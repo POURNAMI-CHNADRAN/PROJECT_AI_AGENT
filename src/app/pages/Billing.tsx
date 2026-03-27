@@ -1,5 +1,43 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
+
+/* ---------------- CHART.JS REGISTER ---------------- */
+import {
+  Chart as ChartJS,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Tooltip,
+  Legend,
+  Filler,
+  type ChartData,
+  type ScriptableContext,
+  type TooltipItem,
+} from "chart.js";
+
+ChartJS.register(
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Tooltip,
+  Legend,
+  Filler
+);
+
+import {
+  premiumBarOptions,
+  premiumPieOptions,
+  premiumLineOptions,
+  createGradient,
+} from "../../utils/chartConfig";
+
+export type ChartCtx = TooltipItem<any>;
 
 import {
   Plus,
@@ -8,38 +46,50 @@ import {
   Filter,
   Calendar,
   RefreshCw,
-  Users
+  Users,
+  TrendingUp,
+  Activity,
+  Briefcase,
 } from "lucide-react";
 
-import { Bar, Pie, Line } from "react-chartjs-2";
-
+import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { downloadBillingPDF } from "../../utils/pdfUtils";
-import { barOptions, donutOptions, lineOptions } from "../../utils/chartConfig";
-import { BillingRecord } from "../../types/billingTypes";
-
 import GenerateBillingModal from "../../app/components/billing/GenerateBillingModal";
 import RegenerateBillingModal from "../../app/components/billing/RegenerateBillingModal";
 
-// ---------------------- SKELETON ROW ----------------------
+/* ---------------- SAFE SKELETON ROW ---------------- */
 const BillingSkeletonRow = () => (
   <tr className="animate-pulse">
     {Array.from({ length: 5 }).map((_, i) => (
-      <td key={i} className="py-3 px-4">
-        <div className="h-4 bg-sky-100 rounded w-full"></div>
+      <td key={i} className="p-3">
+        <div className="h-4 bg-sky-100 rounded w-full" />
       </td>
     ))}
   </tr>
 );
 
-export default function Billing() {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-  const token = localStorage.getItem("token"); // ← AUTH TOKEN HERE
+/* ---------------- SAFE DATE PARSER ---------------- */
+const getMonthKey = (dateStr: string) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 7);
+};
 
-  const [billingData, setBillingData] = useState<BillingRecord[]>([]);
+export default function Billing() {
+  const API_BASE =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const token = localStorage.getItem("token");
+
+  const headers = useMemo(
+    () => ({ Authorization: `Bearer ${token || ""}` }),
+    [token]
+  );
+
+  const [billingData, setBillingData] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
-  const [filtered, setFiltered] = useState<BillingRecord[]>([]);
-  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [filtered, setFiltered] = useState<any[]>([]);
 
   const [projectFilter, setProjectFilter] = useState("All");
   const [employeeFilter, setEmployeeFilter] = useState("All");
@@ -51,202 +101,264 @@ export default function Billing() {
 
   const [loading, setLoading] = useState(true);
 
-  const createGradient = (ctx: any, color: string) => {
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, color + "FF");  // full opacity
-  gradient.addColorStop(1, color + "22");  // soft transparent
-  return gradient;
-};
+  /* ---------------- LOAD DATA ---------------- */
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [billRes, projRes, empRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/billing/all`, { headers }),
+        axios.get(`${API_BASE}/api/projects`, { headers }),
+        axios.get(`${API_BASE}/api/employees`, { headers }),
+      ]);
 
-  // ---------------------- Load Data ----------------------
-const loadData = async () => {
-  setLoading(true);
-  const token = localStorage.getItem("token");
-
-  try {
-    const headers = { Authorization: `Bearer ${token}` };
-
-    const [billRes, projRes, empRes, revRes] = await Promise.all([
-      axios.get(`${API_BASE}/api/billing/all`, { headers }),
-      axios.get(`${API_BASE}/api/projects`, { headers }),
-      axios.get(`${API_BASE}/api/employees`, { headers }),
-      axios.get(`${API_BASE}/api/billing/revenue`, { headers })
-    ]);
-
-    // FIX: Normalize array structure
-    const projectsArray = projRes.data.data || projRes.data;
-    const employeesArray = empRes.data.data || empRes.data;
-    const billingArray = billRes.data.data || billRes.data;
-
-    setBillingData(billingArray);
-    setFiltered(billingArray);
-
-    setProjects(projectsArray);
-    setEmployees(employeesArray);
-
-    setTotalRevenue(revRes.data.total);
-  } catch (err) {
-    console.error("Load error:", err);
-  }
-
-  setLoading(false);
-};
+      setBillingData(Array.isArray(billRes.data) ? billRes.data : []);
+      setProjects(projRes.data?.data || projRes.data || []);
+      setEmployees(empRes.data?.data || empRes.data || []);
+    } catch (err) {
+      console.error("Load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [API_BASE, headers]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  // ---------------------- Filters ----------------------
+  /* ---------------- APPROVED RECORDS ---------------- */
+  const approvedRecords = billingData;
+
+  /* ---------------- FILTER LOGIC ---------------- */
   useEffect(() => {
-    let data = [...billingData];
+    let data = [...approvedRecords];
 
     if (search.trim()) {
+      const q = search.toLowerCase();
       data = data.filter(
         (b) =>
-          b.employee_id?.name?.toLowerCase().includes(search.toLowerCase()) ||
-          b.project_id?.name?.toLowerCase().includes(search.toLowerCase())
+          b?.employee_id?.name?.toLowerCase()?.includes(q) ||
+          b?.project_id?.name?.toLowerCase()?.includes(q)
       );
     }
 
     if (projectFilter !== "All") {
-      data = data.filter(
-        (b) => b.project_id?._id?.toString() === projectFilter.toString()
-      );
+      data = data.filter((b) => b?.project_id?._id === projectFilter);
     }
 
     if (employeeFilter !== "All") {
-      data = data.filter(
-        (b) => b.employee_id?._id?.toString() === employeeFilter.toString()
-      );
+      data = data.filter((b) => b?.employee_id?._id === employeeFilter);
     }
 
-    if (monthFilter !== "All") {
+    if (monthFilter && monthFilter !== "All") {
       data = data.filter(
-        (b) =>
-          new Date(b.billing_month).toISOString().slice(0, 7) === monthFilter
+        (b) => getMonthKey(b?.billing_month) === monthFilter
       );
     }
 
     setFiltered(data);
-  }, [search, projectFilter, employeeFilter, monthFilter, billingData]);
+  }, [search, projectFilter, employeeFilter, monthFilter, approvedRecords]);
 
-  // ---------------------- Handlers ----------------------
+  /* ---------------- ACTIONS ---------------- */
   const handleGenerate = async (form: any) => {
     try {
-      await axios.post(`${API_BASE}/api/billing/generate`, form, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(
+        `${API_BASE}/api/billing/generate`,
+        {
+          employee_id: form.employee_id,
+          project_id: form.project_id,
+          month: form.month,
+          rate: Number(form.rate || 0),
+        },
+        { headers }
+      );
+
       setShowGenerate(false);
       loadData();
-    } catch (err) {
-      alert("Generate failed");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Generate Failed");
     }
   };
 
   const handleRegenerate = async (form: any) => {
     try {
-      await axios.put(`${API_BASE}/api/billing/regenerate`, form, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.put(
+        `${API_BASE}/api/billing/regenerate`,
+        {
+          employee_id: form.employee_id,
+          project_id: form.project_id,
+          month: form.month,
+        },
+        { headers }
+      );
+
       setShowRegenerate(false);
       loadData();
-    } catch (err) {
-      alert("Regenerate failed");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Regenerate Failed");
     }
   };
 
-  // ---------------------- Charts with memo ----------------------
-const revenueByProject = useMemo(() => {
+  /* ---------------- KPI ---------------- */
+  const totalApprovedRevenue = useMemo(
+    () =>
+      approvedRecords.reduce(
+        (s, b) => s + (Number(b?.total_revenue) || 0),
+        0
+      ),
+    [approvedRecords]
+  );
+
+  const totalApprovedStoryPoints = useMemo(
+    () =>
+      approvedRecords.reduce(
+        (s, b) => s + (Number(b?.story_points_completed) || 0),
+        0
+      ),
+    [approvedRecords]
+  );
+
+  const activeProjectsCount = useMemo(
+    () =>
+      new Set(
+        approvedRecords.map((b) => b?.project_id?._id).filter(Boolean)
+      ).size,
+    [approvedRecords]
+  );
+
+  /* ---------------- PREMIUM CHART DATA ---------------- */
+
+const revenueByProject = useMemo<ChartData<"bar">>(() => {
+  const projectRevenues = projects.map((p) =>
+    approvedRecords
+      .filter((b) => b?.project_id?._id === p?._id)
+      .reduce((s, b) => s + (Number(b?.total_revenue) || 0), 0)
+  );
+
   return {
-    labels: projects.map((p) => p.name),
+    labels: projects.map((p) => p?.name || "Unknown"),
+
     datasets: [
       {
         label: "Revenue",
-        data: projects.map((p) =>
-          billingData
-            .filter((b) => b.project_id?._id === p._id)
-            .reduce((sum, b) => sum + b.total_revenue, 0)
-        ),
-        backgroundColor: (context: any) => {
-          const chart = context.chart;
-          const { ctx } = chart;
-          return createGradient(ctx, "#0284C7");
-        },
-        borderRadius: 12,
-        borderSkipped: false,
-        hoverBackgroundColor: "#0284C7",
+        data: projectRevenues,
+
+        backgroundColor: (ctx) =>
+          createGradient(ctx, "#38BDF8", "#1D4ED8"),
+
+        hoverBackgroundColor: "#60A5FA",
+
+        borderRadius: 10,
+        barThickness: 18, // ✅ clean thickness
       },
     ],
   };
-}, [projects, billingData]);
+}, [projects, approvedRecords]);
 
-  const storyPointsByEmployee = useMemo(
-    () => ({
-      labels: employees.map((e) => e.name),
-      datasets: [
-        {
-          label: "Story Points",
-          data: employees.map((e) =>
-            billingData
-              .filter((b) => b.employee_id?._id === e._id)
-              .reduce((sum, b) => sum + b.story_points_completed, 0)
-          ),
-          backgroundColor: ["#0284C7", "#0EA5E9", "#38BDF8", "#7DD3FC"],
-        },
-      ],
-    }),
-    [employees, billingData]
+const storyPointsByEmployee = useMemo<ChartData<"doughnut">>(() => {
+  const employeePoints = employees.map((e) =>
+    approvedRecords
+      .filter((b) => b?.employee_id?._id === e?._id)
+      .reduce(
+        (s, b) => s + (Number(b?.story_points_completed) || 0),
+        0
+      )
   );
 
-  const monthlyTrend = useMemo(
-    () => ({
-      labels: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
-      datasets: [
-        {
-          label: "Monthly Revenue Trend",
-          data: Array.from({ length: 12 }).map((_, month) =>
-            billingData
-              .filter(
-                (b) => new Date(b.billing_month).getMonth() === month
-              )
-              .reduce((sum, b) => sum + b.total_revenue, 0)
-          ),
-          borderColor: "#0284C7",
-          backgroundColor: "#7DD3FC",
-        },
-      ],
-    }),
-    [billingData]
+  const baseColors = [
+    "#38BDF8", // sky-400
+    "#A78BFA", // violet-400
+    "#34D399", // emerald-400
+    "#FB923C", // orange-400
+    "#F472B6", // pink-400
+    "#60A5FA", // blue-400
+    "#4ADE80", // green-400
+    "#FBBF24", // amber-400
+  ];
+
+  return {
+    labels: employees.map((e) => e?.name || "Unknown"),
+    datasets: [
+      {
+        data: employeePoints,
+        backgroundColor: employeePoints.map(
+          (_, i) => baseColors[i % baseColors.length]
+        ),
+        borderWidth: 2,
+        borderColor: "#0F172A",
+      },
+    ],
+  };
+}, [employees, approvedRecords]);
+
+const monthlyTrend = useMemo<ChartData<"line">>(() => {
+  const monthlyData = Array.from({ length: 12 }).map((_, m) =>
+    approvedRecords
+      .filter((b) => {
+        const date = new Date(b?.billing_month);
+        return date.getUTCMonth() === m && !isNaN(date.getTime());
+      })
+      .reduce((s, b) => s + (Number(b?.total_revenue) || 0), 0)
   );
 
-  // ---------------------- Loading Skeleton ----------------------
+  return {
+    labels: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+    datasets: [
+      {
+        label: "Revenue",
+        data: monthlyData,
+        borderColor: "#38BDF8",
+        backgroundColor: (ctx) => {
+          const { ctx: c, chartArea } = (ctx as ScriptableContext<"line">).chart;
+          if (!chartArea) return "rgba(37,99,235,0.08)";
+          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, "rgba(56,189,248,0.35)");
+          g.addColorStop(1, "rgba(37,99,235,0.02)");
+          return g;
+        },
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+      },
+    ],
+  };
+}, [approvedRecords]);
+
+  /* ---------------- TOTAL FOOTER SAFE ---------------- */
+  const filteredTotalRevenue = useMemo(
+    () =>
+      filtered.reduce(
+        (sum, b) => sum + (Number(b?.total_revenue) || 0),
+        0
+      ),
+    [filtered]
+  );
+
+  /* ---------------- LOADING ---------------- */
   if (loading) {
     return (
       <div className="p-6 space-y-8 bg-sky-50">
-
-        {/* Header Skeleton */}
         <div className="bg-sky-200 p-7 rounded-xl shadow animate-pulse">
-          <div className="h-6 w-48 bg-sky-300 rounded mb-3"></div>
-          <div className="h-4 w-80 bg-sky-300 rounded"></div>
+          <div className="h-6 w-48 bg-sky-300 rounded mb-3" />
+          <div className="h-4 w-80 bg-sky-300 rounded" />
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-white border border-sky-200 p-6 rounded-xl shadow animate-pulse">
-              <div className="h-4 w-32 bg-sky-100 rounded mb-3"></div>
-              <div className="h-6 w-20 bg-sky-200 rounded"></div>
+            <div
+              key={i}
+              className="bg-white border p-6 rounded-xl shadow animate-pulse"
+            >
+              <div className="h-4 w-32 bg-sky-100 rounded mb-3" />
+              <div className="h-6 w-20 bg-sky-200 rounded" />
             </div>
           ))}
         </div>
 
-        {/* Table Skeleton */}
-        <div className="bg-white border border-sky-200 rounded-xl shadow">
-          <div className="h-10 bg-sky-100 border-b border-sky-200"></div>
+        <div className="bg-white border rounded-xl shadow">
           <table className="w-full">
             <tbody>
-              {Array.from({ length: 5 }).map((_, idx) => (
-                <BillingSkeletonRow key={idx} />
+              {Array.from({ length: 5 }).map((_, i) => (
+                <BillingSkeletonRow key={i} />
               ))}
             </tbody>
           </table>
@@ -258,17 +370,18 @@ const revenueByProject = useMemo(() => {
   // ---------------------- Main UI ----------------------
   return (
     <div className="p-6 w-full space-y-8 bg-sky-50">
-
-      {/* HEADER */}
+      {/* ---------------------- Premium Header ---------------------- */}
       <div className="bg-sky-200 p-7 rounded-xl shadow-lg text-sky-900 flex justify-between items-center">
-        <div className="bg-white w-12 h-12 rounded-lg flex items-center justify-center shadow-md border border-sky-100">
+        <div className="flex items-center gap-4">
+          <div className="bg-white w-12 h-12 rounded-lg flex items-center justify-center shadow-md border border-sky-100">
             <Users size={28} className="text-sky-700" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-semibold">Billing & Revenue Dashboard</h1>
-          <p className="text-sky-700 text-sm mt-1">
-            View project revenue, performance analytics & billing reports
-          </p>
+          </div>
+          <div>
+            <h1 className="text-3xl font-semibold">Billing & Revenue Dashboard</h1>
+            <p className="text-sky-700 text-sm mt-1">
+              View project revenue, performance analytics & billing reports
+            </p>
+          </div>
         </div>
 
         <div className="flex gap-3">
@@ -295,171 +408,219 @@ const revenueByProject = useMemo(() => {
         </div>
       </div>
 
-      {/* ---------------------- FILTERS ---------------------- */}
-      <div className="
-        bg-white shadow-sm border border-sky-200 rounded-xl p-4 
-        flex flex-wrap gap-4 items-center justify-center animate-fade-in
-      ">
-        
+      {/* FILTERS */}
+      <div className="bg-white shadow-sm border border-sky-200 rounded-xl p-4 flex flex-wrap gap-3 items-center">
         {/* SEARCH */}
-        <div className="flex items-center gap-2 border border-sky-300 px-3 py-2 rounded-lg w-full md:w-72 shadow-sm">
-          <Search size={18} className="text-sky-600" />
+        <div className="flex items-center gap-2 border border-sky-300 bg-white px-3 py-2.5 rounded-lg w-full md:w-72 shadow-sm focus-within:ring-2 focus-within:ring-sky-400/30 focus-within:border-sky-400 transition">
+          <Search size={16} className="text-sky-600 shrink-0" />
           <input
             type="text"
             placeholder="Search project or employee..."
-            className="w-full outline-none text-sm"
+            className="w-full outline-none text-sm bg-transparent text-sky-900 placeholder:text-sky-400"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
         {/* PROJECT FILTER */}
-        <div className="flex items-center gap-2 border border-sky-300 px-3 py-2 rounded-liquid">
-          <Filter size={18} className="text-sky-600" />
+        <div className="flex items-center gap-2 border border-sky-300 bg-white px-3 py-2.5 rounded-lg focus-within:ring-2 focus-within:ring-sky-400/30 transition">
+          <Filter size={16} className="text-sky-600" />
           <select
-            className="outline-none text-sm bg-transparent"
+            className="outline-none text-sm bg-transparent text-sky-900"
             onChange={(e) => setProjectFilter(e.target.value)}
           >
             <option value="All">All Projects</option>
             {projects.map((p) => (
-              <option value={p._id} key={p._id}>{p.name}</option>
+              <option value={p._id} key={p._id}>
+                {p.name}
+              </option>
             ))}
           </select>
         </div>
 
         {/* EMPLOYEE FILTER */}
-        <div className="flex items-center gap-2 border border-sky-300 px-3 py-2 rounded-liquid">
-          <Filter size={18} className="text-sky-600" />
+        <div className="flex items-center gap-2 border border-sky-300 bg-white px-3 py-2.5 rounded-lg focus-within:ring-2 focus-within:ring-sky-400/30 transition">
+          <Filter size={16} className="text-sky-600" />
           <select
-            className="outline-none text-sm bg-transparent"
+            className="outline-none text-sm bg-transparent text-sky-900"
             onChange={(e) => setEmployeeFilter(e.target.value)}
           >
             <option value="All">All Employees</option>
             {employees.map((e) => (
-              <option value={e._id} key={e._id}>{e.name}</option>
+              <option value={e._id} key={e._id}>
+                {e.name}
+              </option>
             ))}
           </select>
         </div>
 
         {/* MONTH FILTER */}
-        <div className="flex items-center gap-2 border border-sky-300 px-3 py-2 rounded-liquid">
-          <Calendar size={18} className="text-sky-600" />
+        <div className="flex items-center gap-2 border border-sky-300 bg-white px-3 py-2.5 rounded-lg focus-within:ring-2 focus-within:ring-sky-400/30 transition">
+          <Calendar size={16} className="text-sky-600" />
           <input
             type="month"
-            className="outline-none text-sm bg-transparent"
+            className="outline-none text-sm bg-transparent text-sky-900"
             onChange={(e) => setMonthFilter(e.target.value)}
           />
         </div>
       </div>
 
-      {/* ---------------------- SUMMARY CARDS ---------------------- */}
+      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-        <div className="bg-white border border-sky-200 p-6 rounded-xl shadow-sm">
-          <div className="text-sm text-sky-700">Total Revenue</div>
-          <div className="text-3xl font-semibold text-sky-900 mt-2">₹{totalRevenue}</div>
+        <div className="relative overflow-hidden bg-gradient-to-br from-sky-500 to-sky-700 p-6 rounded-2xl shadow-xl text-white">
+          <div className="pointer-events-none absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10" />
+          <p className="text-sm font-medium text-sky-100">Total Revenue</p>
+          <p className="text-3xl font-bold mt-1.5">
+            ₹{totalApprovedRevenue.toLocaleString("en-IN")}
+          </p>
+          <p className="mt-3 text-xs text-sky-200 flex items-center gap-1">
+            <TrendingUp size={13} /> All billing records
+          </p>
         </div>
 
-        <div className="bg-white border border-sky-200 p-6 rounded-xl shadow-sm">
-          <div className="text-sm text-sky-700">Total Story Points</div>
-          <div className="text-3xl font-semibold text-sky-900 mt-2">
-            {billingData.reduce((sum, b) => sum + b.story_points_completed, 0)}
-          </div>
+        <div className="relative overflow-hidden bg-gradient-to-br from-sky-400 to-sky-600 p-6 rounded-2xl shadow-xl text-white">
+          <div className="pointer-events-none absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10" />
+          <p className="text-sm font-medium text-sky-100">Total Story Points</p>
+          <p className="text-3xl font-bold mt-1.5">{totalApprovedStoryPoints}</p>
+          <p className="mt-3 text-xs text-sky-200 flex items-center gap-1">
+            <Activity size={13} /> Across all projects
+          </p>
         </div>
 
-        <div className="bg-white border border-sky-200 p-6 rounded-xl shadow-sm">
-          <div className="text-sm text-sky-700">Active Projects</div>
-          <div className="text-3xl font-semibold text-sky-900 mt-2">
-            {new Set(billingData.map((b) => b.project_id?._id)).size}
-          </div>
-        </div>
-      </div>
-
-      {/* ---------------------- CHARTS ---------------------- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* REVENUE BY PROJECT */}
-        <div className="bg-white border border-sky-200 p-4 rounded-xl shadow-sm">
-          <h3 className="text-sky-800 font-semibold mb-3">Revenue by Project</h3>
-          <Bar data={revenueByProject} options={barOptions} />
-        </div>
-
-        {/* STORY POINTS PIE */}
-        <div className="bg-white border border-sky-200 p-4 rounded-xl shadow-sm">
-          <h3 className="text-sky-800 font-semibold mb-3">Story Points by Employee</h3>
-          <Pie data={storyPointsByEmployee} options={donutOptions} />
-        </div>
-
-        {/* MONTHLY TREND */}
-        <div className="bg-white border border-sky-200 p-4 rounded-xl shadow-sm">
-          <h3 className="text-sky-800 font-semibold mb-3">Monthly Revenue Trend</h3>
-          <Line data={monthlyTrend} options={lineOptions} />
+        <div className="relative overflow-hidden bg-gradient-to-br from-sky-600 to-sky-800 p-6 rounded-2xl shadow-xl text-white">
+          <div className="pointer-events-none absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10" />
+          <p className="text-sm font-medium text-sky-100">Active Projects</p>
+          <p className="text-3xl font-bold mt-1.5">{activeProjectsCount}</p>
+          <p className="mt-3 text-xs text-sky-200 flex items-center gap-1">
+            <Briefcase size={13} /> Currently tracked
+          </p>
         </div>
       </div>
 
-      {/* ---------------------- BILLING TABLE ---------------------- */}
-      <div className="bg-white rounded-xl border border-sky-200 shadow-sm p-4 animate-fade-in">
-        
+      {/* BILLING TABLE */}
+      <div className="bg-white rounded-2xl border border-sky-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-sky-100 flex items-center justify-between">
+          <h3 className="text-sky-800 font-semibold">Billing Records</h3>
+          <span className="text-xs text-sky-600 bg-sky-100 px-2.5 py-1 rounded-full font-medium">
+            {filtered.length} records
+          </span>
+        </div>
+
         {billingData.length === 0 ? (
           <div className="py-14 text-center text-sky-800">
             <img
               src="https://illustrations.popsy.co/violet/empty-folder.svg"
               className="h-40 mx-auto opacity-80"
+              alt="No data"
             />
-            <p className="mt-4 text-lg font-medium">No Billing Records Found</p>
+            <p className="mt-4 text-lg font-medium">
+              No Billing Records Found
+            </p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-14 text-center text-sky-800">
-            <p className="mt-4 text-lg font-medium">No records match your filter</p>
+            <p className="mt-4 text-lg font-medium">
+              No Records match your Filter
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-sm whitespace-nowrap table-fixed">
-              <thead>
-                <tr className="bg-sky-100 text-sky-800 font-semibold">
-                  <th className="py-2 px-4 text-left">Project</th>
-                  <th className="py-2 px-4 text-left">Employee</th>
-                  <th className="py-2 px-4 text-left">Points</th>
-                  <th className="py-2 px-4 text-left">Rate</th>
-                  <th className="py-2 px-4 text-left">Revenue</th>
+
+          <div className="bg-white shadow border border-sky-200 overflow-hidden">
+            <table className="w-full text-sm">
+                <thead className="bg-sky-100 text-sky-800 text-center">
+                <tr>
+                  <th className="py-3">Project</th>
+                  <th className="py-3">Employee</th>
+                  <th className="py-3">Points</th>
+                  <th className="py-3">Rate</th>
+                  <th className="py-3">Revenue</th>
                 </tr>
               </thead>
 
               <tbody>
                 {filtered.map((b, idx) => (
                   <tr
-                    key={b._id}
-                    className="border-b hover:bg-sky-50 transition"
-                    style={{ animation: `fadeIn .3s ease ${idx * 0.05}s both` }}
+                    key={b._id || idx}
+                    className="border-b border-sky-100 hover:bg-sky-50 transition-colors"
+                    style={{
+                      animation: `fadeIn .3s ease ${idx * 0.05}s both`,
+                    }}
                   >
-                    <td className="py-2 px-4">{b.project_id?.name}</td>
-                    <td className="py-2 px-4">{b.employee_id?.name}</td>
-                    <td className="py-2 px-4">{b.story_points_completed}</td>
-                    <td className="py-2 px-4">₹{b.billing_rate_per_point}</td>
-                    <td className="py-2 px-4 font-semibold text-sky-800">
-                      ₹{b.total_revenue}
+                    <td className="py-3 text-center">{b.project_id?.name}</td>
+                    <td className="py-3 text-center">{b.employee_id?.name}</td>
+                    <td className="py-3 text-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100">
+                        {b.story_points_completed} pts
+                      </span>
                     </td>
+                    <td className="py-3 text-center">₹{b.billing_rate_per_point}</td>
+                    <td className="py-3 font-semibold text-center">₹{b.total_revenue}</td>
                   </tr>
                 ))}
               </tbody>
 
               <tfoot>
-                <tr className="bg-sky-100 border-t border-sky-200">
-                  <td className="py-2 px-4 font-semibold text-sky-800" colSpan={4}>
+                <tr className="bg-gradient-to-r from-sky-200 to-sky-100 border-t-2 border-sky-300">
+                  <td
+                    className="py-4 text-center font-extrabold text-sky-900 tracking-wide"
+                    colSpan={4}
+                  >
                     Total Revenue
                   </td>
-                  <td className="py-2 px-4 font-semibold text-sky-800">
-                    ₹{filtered.reduce((sum, b) => sum + b.total_revenue, 0)}
+                  <td className="py-4 text-center font-extrabold text-sky-900 text-lg">
+                    ₹{filteredTotalRevenue.toLocaleString("en-IN")}
                   </td>
                 </tr>
               </tfoot>
-
+              
             </table>
           </div>
         )}
       </div>
 
-      {/* ---------------------- MODALS ---------------------- */}
+      {/* CHARTS */}
+      <div className="bg-sky-50 border border-sky-200 rounded-3xl p-6 shadow-lg grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* REVENUE BY PROJECT */}
+        <div className="bg-white border border-sky-100 p-5 rounded-2xl shadow-sm flex flex-col h-[320px] text-center">
+          <div className="flex items-center gap-2 mb-4 text-center">
+            <span className="w-2 h-2 rounded-full bg-sky-500" />
+            <h3 className="text-sky-800 text-xs font-semibold uppercase tracking-widest">
+              Revenue by Project
+            </h3>
+          </div>
+          <div className="flex-1 relative">
+            <Bar data={revenueByProject} options={premiumBarOptions} />
+          </div>
+        </div>
+
+        {/* STORY POINTS DOUGHNUT */}
+        <div className="bg-white border border-sky-100 p-5 rounded-2xl shadow-sm flex flex-col h-[320px]">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-2 h-2 rounded-full bg-sky-400" />
+            <h3 className="text-sky-800 text-xs font-semibold uppercase tracking-widest">
+              Story Points by Employee
+            </h3>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <Doughnut data={storyPointsByEmployee} options={premiumPieOptions} />
+          </div>
+        </div>
+
+        {/* MONTHLY TREND */}
+        <div className="bg-white border border-sky-100 p-5 rounded-2xl shadow-sm flex flex-col h-[320px]">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-2 h-2 rounded-full bg-sky-600" />
+            <h3 className="text-sky-800 text-xs font-semibold uppercase tracking-widest">
+              Monthly Revenue Trend
+            </h3>
+          </div>
+          <div className="flex-1 relative">
+            <Line data={monthlyTrend} options={premiumLineOptions} />
+          </div>
+        </div>
+      </div>
+
+      {/* MODALS */}
       {showGenerate && (
         <GenerateBillingModal
           onClose={() => setShowGenerate(false)}
@@ -473,7 +634,6 @@ const revenueByProject = useMemo(() => {
           onRegenerate={handleRegenerate}
         />
       )}
-
     </div>
   );
 }

@@ -1,49 +1,56 @@
 import Billing from "../models/Billing.js";
 import Timesheet from "../models/Timesheet.js";
 
-export const getProfile = (req, res) => {
-  res.json({
-    message: "Logged-in User Info",
-    user: {
-      _id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role
-    }
-  });
-};
-
+// ---------------------- GET ALL ----------------------
 export const getAllBilling = async (req, res) => {
-  const data = await Billing.find({})
-    .populate("employee_id", "name")
-    .populate("project_id", "name");
+  try {
+    const data = await Billing.find({})
+      .populate("employee_id", "name")
+      .populate("project_id", "name");
 
-  res.json(data);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
+// ---------------------- COMMON MONTH RANGE ----------------------
+const getMonthRange = (month) => {
+  const d = new Date(month);
+
+  const start = new Date(Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    1
+  ));
+
+  const end = new Date(start);
+  end.setUTCMonth(end.getUTCMonth() + 1);
+
+  return { start, end };
+};
+
+// ---------------------- GENERATE ----------------------
 export const generateBilling = async (req, res) => {
   try {
     const { employee_id, project_id, month, rate } = req.body;
 
-    // Convert month to start/end range
-    const start = new Date(month);
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + 1);
+    const { start, end } = getMonthRange(month);
 
-    // 1️⃣ Prevent duplicate billing for same employee + project + month
+    // check existing billing
     const existingBilling = await Billing.findOne({
       employee_id,
       project_id,
-      billing_month: start
+      billing_month: { $gte: start, $lt: end }
     });
 
     if (existingBilling) {
       return res.status(400).json({
-        message: "Billing already generated for this employee, project & month"
+        message: "Billing already exists for this month"
       });
     }
 
-    // 2️⃣ Fetch APPROVED timesheets for this month (your system uses status)
+    // approved timesheets only
     const timesheets = await Timesheet.find({
       employee_id,
       project_id,
@@ -51,16 +58,19 @@ export const generateBilling = async (req, res) => {
       work_date: { $gte: start, $lt: end }
     });
 
-    // 3️⃣ Calculate story points
     const totalPoints = timesheets.reduce(
       (sum, t) => sum + (t.story_points_completed || 0),
       0
     );
 
-    // 4️⃣ Calculate revenue
+    if (totalPoints === 0) {
+      return res.status(400).json({
+        message: "No approved timesheets found for this month"
+      });
+    }
+
     const revenue = totalPoints * rate;
 
-    // 5️⃣ Create billing record
     const billing = await Billing.create({
       employee_id,
       project_id,
@@ -70,53 +80,35 @@ export const generateBilling = async (req, res) => {
       total_revenue: revenue
     });
 
-    return res.json(billing);
+    res.json(billing);
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 };
 
-export const getProjectBilling = async (req, res) => {
-  const data = await Billing.find({ project_id: req.params.id });
-  res.json(data);
-};
-
-export const getEmployeeBilling = async (req, res) => {
-  const data = await Billing.find({ employee_id: req.params.id });
-  res.json(data);
-};
-
-export const getTotalRevenue = async (req, res) => {
-  const data = await Billing.aggregate([
-    { $group: { _id: null, total: { $sum: "$total_revenue" } } }
-  ]);
-
-  res.json(data[0] || { total: 0 });
-};
-
+// ---------------------- REGENERATE ----------------------
 export const regenerateBilling = async (req, res) => {
   try {
-    const { employee_id, project_id, month, rate } = req.body;
+    const { employee_id, project_id, month } = req.body;
 
-    const start = new Date(month);
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + 1);
+    const { start, end } = getMonthRange(month);
 
-    // 1️⃣ Find existing billing for this month
     const existingBilling = await Billing.findOne({
       employee_id,
       project_id,
-      billing_month: start
+      billing_month: { $gte: start, $lt: end }
     });
 
     if (!existingBilling) {
       return res.status(404).json({
-        message: "No billing found for this month. Generate billing first."
+        message: "No Billing Found. Generate First."
       });
     }
 
-    // 2️⃣ Fetch APPROVED timesheets for this employee/project/month
+    // use stored rate (prevent tampering)
+    const rate = existingBilling.billing_rate_per_point;
+
     const timesheets = await Timesheet.find({
       employee_id,
       project_id,
@@ -124,28 +116,68 @@ export const regenerateBilling = async (req, res) => {
       work_date: { $gte: start, $lt: end }
     });
 
-    // 3️⃣ Auto-calculate story points
     const totalPoints = timesheets.reduce(
       (sum, t) => sum + (t.story_points_completed || 0),
       0
     );
 
-    // 4️⃣ Auto-calculate revenue
+    if (totalPoints === 0) {
+      return res.status(400).json({
+        message: "No Approved Timesheets found for this Month"
+      });
+    }
+
     const revenue = totalPoints * rate;
 
-    // 5️⃣ Update existing billing record
     existingBilling.story_points_completed = totalPoints;
-    existingBilling.billing_rate_per_point = rate;
     existingBilling.total_revenue = revenue;
 
     await existingBilling.save();
 
-    return res.json({
-      message: "Billing regenerated successfully",
+    res.json({
+      message: "Billing Regenerated Successfully",
       billing: existingBilling
     });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ---------------------- PROJECT BILLING ----------------------
+export const getProjectBilling = async (req, res) => {
+  try {
+    const data = await Billing.find({ project_id: req.params.id });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ---------------------- EMPLOYEE BILLING ----------------------
+export const getEmployeeBilling = async (req, res) => {
+  try {
+    const data = await Billing.find({ employee_id: req.params.id });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ---------------------- TOTAL REVENUE ----------------------
+export const getTotalRevenue = async (req, res) => {
+  try {
+    const data = await Billing.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$total_revenue" }
+        }
+      }
+    ]);
+
+    res.json(data[0] || { total: 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

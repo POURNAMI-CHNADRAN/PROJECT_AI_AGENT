@@ -28,4 +28,16 @@ const billingSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+/* ✅ PREVENT DUPLICATE BILLING */
+billingSchema.index(
+  { employee_id: 1, project_id: 1, billing_month: 1 },
+  { unique: true }
+);
+
+billingSchema.pre("save", function (next) {
+  this.total_revenue =
+    (this.story_points_completed || 0) * (this.billing_rate_per_point || 0);
+  next();
+});
+
 export default mongoose.model("Billing", billingSchema);
