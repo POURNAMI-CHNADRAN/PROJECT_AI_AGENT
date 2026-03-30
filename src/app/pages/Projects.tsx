@@ -77,40 +77,52 @@ export default function Projects() {
   /* ================= LOAD DATA ================= */
   const loadData = async () => {
     setLoading(true);
+
     try {
       const [projRes, clientRes, empRes] = await Promise.all([
         fetch(`${API_BASE}/api/projects`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE}/api/clients`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE}/api/employees`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const projJson = await projRes.json();
       const clientJson = await clientRes.json();
       const empJson = await empRes.json();
 
-      // Normalize billingModel (fix backend mismatches)
-      const normalizedProjects = (projJson.data || projJson).map((p: Project) => ({
+      // ✅ Normalize ALL responses safely
+      const projectsArray = Array.isArray(projJson)
+        ? projJson
+        : projJson.data || [];
+
+      const clientsArray = Array.isArray(clientJson)
+        ? clientJson
+        : clientJson.data || [];
+
+      const employeesArray = Array.isArray(empJson)
+        ? empJson
+        : empJson.data || [];
+
+      // ✅ Normalize billingModel (handles backend inconsistency)
+      const normalizedProjects = projectsArray.map((p: any) => ({
         ...p,
-        billingModel:
-          p.billingModel === "Non-Billable"
-            ? "Non-Billable"
-            : p.billingModel
+        billingModel: p.billingModel ?? p.type ?? "Non-Billable",
       }));
 
       setProjects(normalizedProjects);
       setFiltered(normalizedProjects);
-      setClients(clientJson.data || clientJson);
-      setEmployees(empJson.data || empJson);
+      setClients(clientsArray);
+      setEmployees(employeesArray);
     } catch (e) {
       console.error("Load error:", e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {

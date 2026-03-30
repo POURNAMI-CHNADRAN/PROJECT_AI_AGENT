@@ -1,183 +1,140 @@
 import Billing from "../models/Billing.js";
-import Timesheet from "../models/Timesheet.js";
+import Allocation from "../models/Allocation.js";
 
-// ---------------------- GET ALL ----------------------
-export const getAllBilling = async (req, res) => {
-  try {
-    const data = await Billing.find({})
-      .populate("employee_id", "name")
-      .populate("project_id", "name");
-
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ---------------------- COMMON MONTH RANGE ----------------------
-const getMonthRange = (month) => {
-  const d = new Date(month);
-
-  const start = new Date(Date.UTC(
-    d.getUTCFullYear(),
-    d.getUTCMonth(),
-    1
-  ));
-
-  const end = new Date(start);
-  end.setUTCMonth(end.getUTCMonth() + 1);
-
-  return { start, end };
-};
-
-// ---------------------- GENERATE ----------------------
+/* =========================================================
+   ✅ GENERATE BILLING (FINAL REAL-WORLD VERSION)
+========================================================= */
 export const generateBilling = async (req, res) => {
   try {
-    const { employee_id, project_id, month, rate } = req.body;
+    const { month, year } = req.body;
 
-    const { start, end } = getMonthRange(month);
-
-    // check existing billing
-    const existingBilling = await Billing.findOne({
-      employee_id,
-      project_id,
-      billing_month: { $gte: start, $lt: end }
-    });
-
-    if (existingBilling) {
+    if (!month || !year) {
       return res.status(400).json({
-        message: "Billing already exists for this month"
+        message: "month and year are required",
       });
     }
 
-    // approved timesheets only
-    const timesheets = await Timesheet.find({
-      employee_id,
-      project_id,
-      status: "Approved",
-      work_date: { $gte: start, $lt: end }
-    });
+    const allocations = await Allocation.find({ month, year })
+      .populate("employee")
+      .populate("project");
 
-    const totalPoints = timesheets.reduce(
-      (sum, t) => sum + (t.story_points_completed || 0),
-      0
+    if (!allocations.length) {
+      return res.json({ message: "No Allocations Found" });
+    }
+
+    const billingMap = new Map();
+
+    let skipped = 0;
+    let totalProcessed = 0;
+
+    /* -----------------------------------------------------
+       🔥 GROUPING LOGIC
+    ----------------------------------------------------- */
+    for (const a of allocations) {
+      if (!a.employee || !a.project) continue;
+
+      // ❗ Skip non-billable
+      if (!a.isBillable) {
+        skipped++;
+        continue;
+      }
+
+      totalProcessed++;
+
+      const key = `${a.employee._id}_${a.project._id}`;
+
+      const rate =
+        a.employee.costPerMonth && a.employee.costPerMonth > 0
+          ? a.employee.costPerMonth / 160
+          : 500; // fallback
+
+      if (!billingMap.has(key)) {
+        billingMap.set(key, {
+          employee_id: a.employee._id,
+          project_id: a.project._id,
+          total_hours: 0,
+          rate_per_hour: rate,
+        });
+      }
+
+      billingMap.get(key).total_hours += a.fte || 0;
+    }
+
+    const results = [];
+    let totalRevenue = 0;
+    let totalHours = 0;
+
+    /* -----------------------------------------------------
+       🔥 SAVE BILLING
+    ----------------------------------------------------- */
+    for (const billData of billingMap.values()) {
+    const bill = await Billing.findOneAndUpdate(
+      {
+        employee_id: billData.employee_id,
+        project_id: billData.project_id,
+        month,
+        year,
+      },
+      {
+        ...billData,
+        month,
+        year,
+        total_revenue: billData.total_hours * billData.rate_per_hour, // ✅ ADD THIS
+      },
+      { upsert: true, new: true }
     );
 
-    if (totalPoints === 0) {
-      return res.status(400).json({
-        message: "No approved timesheets found for this month"
-      });
+      totalRevenue += bill.total_revenue || 0;
+      totalHours += bill.total_hours || 0;
+
+      results.push(bill);
     }
 
-    const revenue = totalPoints * rate;
+    /* -----------------------------------------------------
+       🔥 FINAL RESPONSE
+    ----------------------------------------------------- */
+    res.json({
+      message: "Billing Generated Successfully",
+      summary: {
+        totalBillingRecords: results.length,
 
-    const billing = await Billing.create({
-      employee_id,
-      project_id,
-      billing_month: start,
-      story_points_completed: totalPoints,
-      billing_rate_per_point: rate,
-      total_revenue: revenue
+        totalEmployees: new Set(
+          results.map(r => r.employee_id.toString())
+        ).size,
+
+        totalProjects: new Set(
+          results.map(r => r.project_id.toString())
+        ).size,
+
+        totalHours,
+        totalRevenue,
+
+        avgRate: totalRevenue / totalHours,
+
+        processedAllocations: totalProcessed,
+        skippedNonBillable: skipped,
+      },
+      data: results,
     });
-
-    res.json(billing);
-
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ---------------------- REGENERATE ----------------------
-export const regenerateBilling = async (req, res) => {
+/* =========================================================
+   ✅ GET BILLING
+========================================================= */
+export const getBilling = async (req, res) => {
   try {
-    const { employee_id, project_id, month } = req.body;
-
-    const { start, end } = getMonthRange(month);
-
-    const existingBilling = await Billing.findOne({
-      employee_id,
-      project_id,
-      billing_month: { $gte: start, $lt: end }
-    });
-
-    if (!existingBilling) {
-      return res.status(404).json({
-        message: "No Billing Found. Generate First."
-      });
-    }
-
-    // use stored rate (prevent tampering)
-    const rate = existingBilling.billing_rate_per_point;
-
-    const timesheets = await Timesheet.find({
-      employee_id,
-      project_id,
-      status: "Approved",
-      work_date: { $gte: start, $lt: end }
-    });
-
-    const totalPoints = timesheets.reduce(
-      (sum, t) => sum + (t.story_points_completed || 0),
-      0
-    );
-
-    if (totalPoints === 0) {
-      return res.status(400).json({
-        message: "No Approved Timesheets found for this Month"
-      });
-    }
-
-    const revenue = totalPoints * rate;
-
-    existingBilling.story_points_completed = totalPoints;
-    existingBilling.total_revenue = revenue;
-
-    await existingBilling.save();
+    const data = await Billing.find()
+      .populate("employee_id", "name employeeId")
+      .populate("project_id", "name");
 
     res.json({
-      message: "Billing Regenerated Successfully",
-      billing: existingBilling
+      count: data.length,
+      data,
     });
-
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ---------------------- PROJECT BILLING ----------------------
-export const getProjectBilling = async (req, res) => {
-  try {
-    const data = await Billing.find({ project_id: req.params.id });
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ---------------------- EMPLOYEE BILLING ----------------------
-export const getEmployeeBilling = async (req, res) => {
-  try {
-    const data = await Billing.find({ employee_id: req.params.id });
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ---------------------- TOTAL REVENUE ----------------------
-export const getTotalRevenue = async (req, res) => {
-  try {
-    const data = await Billing.aggregate([
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$total_revenue" }
-        }
-      }
-    ]);
-
-    res.json(data[0] || { total: 0 });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };

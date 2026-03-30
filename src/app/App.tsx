@@ -1,12 +1,12 @@
 // App.tsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "../auth/authContext";
 import RoleRoute from "../auth/RoleRoute";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Employees from "./pages/Employees";
+import Resources from "./pages/Resources";
+import ResourceDetails from "./pages/ResourceDetails";
 import Departments from "./pages/Departments";
 import Skills from "./pages/Skills";
 import Clients from "./pages/Clients";
@@ -23,95 +23,185 @@ import EmployeeProfile from "./pages/EmployeeProfile";
 
 import Layout from "./components/Layout";
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-};
-
 export default function App() {
   return (
     <Routes>
+      {/* ---------- Public ---------- */}
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      <Route path="/dashboard" element={
-        <ProtectedRoute><Layout><Dashboard/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/employees" element={
-        <ProtectedRoute><Layout><Employees/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/my-profile" element={
-        <ProtectedRoute>
-          <RoleRoute allowedRoles={["Employee","Admin","HR"]}>
-            <Layout><MyProfile/></Layout>
-          </RoleRoute>
-        </ProtectedRoute>
-      }/>
-
-      <Route path="/departments" element={
-        <ProtectedRoute><Layout><Departments/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/skills" element={
-        <ProtectedRoute><Layout><Skills/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/clients" element={
-        <ProtectedRoute><Layout><Clients/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/projects" element={
-        <ProtectedRoute><Layout><Projects/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/stories" element={
-        <ProtectedRoute><Layout><Stories/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/resource-allocation" element={
-        <ProtectedRoute><Layout><ResourceAllocation/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/timesheets" element={
-        <ProtectedRoute><Layout><Timesheets/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/billing" element={
-        <ProtectedRoute><Layout><Billing/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/reports" element={
-        <ProtectedRoute><Layout><Reports/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/ai-insights" element={
-        <ProtectedRoute><Layout><AIInsights/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/user-management" element={
-        <ProtectedRoute><Layout><UserManagement/></Layout></ProtectedRoute>
-      }/>
-
-      <Route path="/test_page" element={
-        <ProtectedRoute><Layout><EmployeeProfile/></Layout></ProtectedRoute>
-      }/>
-
+      {/* ---------- Dashboard ---------- */}
       <Route
-        path="/employees/:id"
+        path="/dashboard"
         element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["Admin", "HR"]}>
-              <Layout>
-                <EmployeeProfile />
-              </Layout>
-            </RoleRoute>
-          </ProtectedRoute>
+          <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </RoleRoute>
         }
       />
 
+      {/* ---------- Resources ---------- */}
+      <Route
+        path="/resources"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <Resources />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/resources/:id"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <ResourceDetails />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      {/* ---------- Profile ---------- */}
+      <Route
+        path="/my-profile"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
+            <Layout>
+              <MyProfile />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      {/* ---------- Master Data ---------- */}
+      <Route
+        path="/departments"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <Departments />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/skills"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <Skills />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/clients"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <Clients />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/projects"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <Projects />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      {/* ---------- Operations ---------- */}
+      <Route
+        path="/resource-allocation"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <ResourceAllocation />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/timesheets"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
+            <Layout>
+              <Timesheets />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/billing"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <Billing />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <Reports />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/ai-insights"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <AIInsights />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/user-management"
+        element={
+          <RoleRoute allowedRoles={["Admin"]}>
+            <Layout>
+              <UserManagement />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      {/* ---------- Employee Profile ---------- */}
+      <Route
+        path="/employees/:id"
+        element={
+          <RoleRoute allowedRoles={["Admin", "HR"]}>
+            <Layout>
+              <EmployeeProfile />
+            </Layout>
+          </RoleRoute>
+        }
+      />
+
+      {/* ---------- Fallback ---------- */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

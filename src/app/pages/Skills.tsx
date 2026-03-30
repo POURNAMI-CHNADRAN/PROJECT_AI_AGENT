@@ -20,13 +20,15 @@ export default function Skills() {
       });
 
       const data = await res.json();
-      setSkills(data.data || []);
+
+      // ✅ FIX: handle array response correctly
+      setSkills(Array.isArray(data) ? data : data.data || []);
     } catch (err) {
-      console.log("Skill Load Error:", err);
+      console.error("Skill Load Error:", err);
     } finally {
       setLoading(false);
     }
-  };
+};
 
   // Add Skill
   const handleAdd = async () => {

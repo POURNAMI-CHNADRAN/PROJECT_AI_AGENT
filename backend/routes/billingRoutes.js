@@ -1,20 +1,17 @@
 import express from "express";
 import {
   generateBilling,
-  getProjectBilling,
-  getEmployeeBilling,
-  getTotalRevenue, 
-  regenerateBilling, 
-  getAllBilling
+  getBilling
 } from "../controllers/billingController.js";
+
+import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/generate", generateBilling);
-router.get("/project/:id", getProjectBilling);
-router.get("/employee/:id", getEmployeeBilling);
-router.get("/revenue", getTotalRevenue);
-router.put("/regenerate", regenerateBilling);
-router.get("/all", getAllBilling);
+/* ---------------- READ ---------------- */
+router.get("/", protect, authorize("Admin", "HR", "Manager"), getBilling);
+
+/* ---------------- GENERATE ---------------- */
+router.post("/generate", protect, authorize("Admin", "HR"), generateBilling);
 
 export default router;

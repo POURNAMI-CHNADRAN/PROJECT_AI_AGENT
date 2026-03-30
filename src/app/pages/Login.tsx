@@ -1,4 +1,3 @@
-// src/pages/Login.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -120,7 +119,7 @@ export default function Login() {
       fontSize: 12,
       fontWeight: 600,
       color: "#0c4a6e",
-      marginBottom: 6,
+      marginBottom: 8,
     },
 
     inputWrap: { position: "relative" as const },

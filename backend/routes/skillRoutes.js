@@ -1,16 +1,48 @@
 import express from "express";
+import Skill from "../models/Skill.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
-import { createSkill, getSkills, deleteSkill } from "../controllers/skillController.js";
 
 const router = express.Router();
 
-// Admin only
-router.post("/", protect, authorize("Admin"), createSkill);
+/* ---------------- GET ALL ---------------- */
+router.get("/", protect, authorize("Admin", "HR", "Manager"), async (req, res) => {
+  const data = await Skill.find();
+  res.json(data);
+});
 
-// Everyone can view
-router.get("/", protect, authorize("Admin", "HR", "Manager", "Employee"), getSkills);
+/* ---------------- CREATE ---------------- */
+router.post("/", protect, authorize("Admin", "HR"), async (req, res) => {
+  const skill = new Skill(req.body);
+  await skill.save();
+  res.status(201).json(skill);
+});
 
-// Admin only
-router.delete("/:id", protect, authorize("Admin"), deleteSkill);
+/* ---------------- UPDATE (EDIT) ---------------- */
+router.patch("/:id", protect, authorize("Admin", "HR"), async (req, res) => {
+  try {
+    const updatedSkill = await Skill.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,        // return updated document
+        runValidators: true
+      }
+    );
+
+    if (!updatedSkill) {
+      return res.status(404).json({ message: "Skill NOT Found" });
+    }
+
+    res.json(updatedSkill);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ---------------- DELETE ---------------- */
+router.delete("/:id", protect, authorize("Admin", "HR"), async (req, res) => {
+  await Skill.findByIdAndDelete(req.params.id);
+  res.json({ message: "Deleted" });
+});
 
 export default router;

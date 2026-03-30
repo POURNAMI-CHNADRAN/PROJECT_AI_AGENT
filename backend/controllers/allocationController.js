@@ -1,298 +1,318 @@
 import Allocation from "../models/Allocation.js";
 
-/* ================= HELPER ================= */
+/* =========================================================
+   🔥 HELPER: UTILIZATION ENGINE (CORE RM LOGIC)
+========================================================= */
+const getUtilizationData = (totalFTE) => {
+  let status = "Optimal";
+  let riskLevel = "Normal";
 
-// Check overlapping allocations
-const getOverlappingAllocations = async (
-  employee,
-  startDate,
-  endDate,
-  excludeId = null
-) => {
-  const query = {
-    employee,
-    startDate: { $lte: endDate },
-    endDate: { $gte: startDate },
-  };
-
-  if (excludeId) {
-    query._id = { $ne: excludeId };
+  if (totalFTE === 0) {
+    status = "Bench";
+    riskLevel = "High";
+  } else if (totalFTE < 160) {
+    status = "Underutilized";
+    if (totalFTE < 120) riskLevel = "Medium";
+  } else if (totalFTE === 160) {
+    status = "Optimal";
+  } else {
+    status = "Overutilized";
+    riskLevel = "High";
   }
 
-  return await Allocation.find(query);
+  return {
+    totalFTE,
+    remainingHours: Math.max(0, 160 - totalFTE),
+    overHours: Math.max(0, totalFTE - 160),
+    status,
+    riskLevel,
+    canMove: true,
+  };
 };
 
-// Validate total allocation <= 100
-const validateAllocationLimit = (existingAllocations, newAllocation) => {
-  const total =
-    existingAllocations.reduce((sum, a) => sum + a.allocation, 0) +
-    newAllocation;
-
-  return total <= 100;
-};
-
-/* ================= CREATE ================= */
-
+/* =========================================================
+   ✅ CREATE ALLOCATION
+========================================================= */
 export const createAllocation = async (req, res) => {
   try {
-    const { employee, project, allocation, startDate, endDate } = req.body;
+    const { employee, fte, month, year } = req.body;
 
-    // 🔹 Required validation
-    if (!employee || !project || allocation === undefined || !startDate || !endDate) {
-      return res.status(400).json({ error: "All Fields are Required" });
-    }
-
-    // 🔹 Allocation range
-    if (allocation < 0 || allocation > 100) {
+    if (!employee || !fte || !month || !year) {
       return res.status(400).json({
-        error: "Allocation must be between 0 and 100",
+        message: "employee, fte, month, year are required",
       });
     }
 
-    // 🔹 Date validation
-    if (new Date(startDate) > new Date(endDate)) {
+    if (fte <= 0) {
       return res.status(400).json({
-        error: "Start Date cannot be after End Date",
+        message: "FTE must be greater than 0",
       });
     }
 
-    // 🔥 Overlap check
-    const overlaps = await getOverlappingAllocations(
-      employee,
-      startDate,
-      endDate
+    if (fte > 160) {
+      return res.status(400).json({
+        message: "Single allocation cannot exceed 160 hrs",
+      });
+    }
+
+    const existing = await Allocation.find({ employee, month, year });
+
+    const existingTotal = existing.reduce(
+      (sum, a) => sum + (a.fte || 0),
+      0
     );
 
-    // 🔥 Allocation limit check
-    if (!validateAllocationLimit(overlaps, allocation)) {
-      return res.status(400).json({
-        error: "Total Allocation exceeds 100% for this Employee",
-      });
+    const totalFTE = existingTotal + fte;
+    const utilization = getUtilizationData(totalFTE);
+
+    let warning = null;
+    if (totalFTE > 160) {
+      warning = "Employee is overutilized";
     }
 
-    const newAllocation = await Allocation.create({
-      employee,
-      project,
-      allocation,
-      startDate,
-      endDate,
+    const allocation = new Allocation({
+      ...req.body,
+      status: utilization.status,
     });
+
+    await allocation.save();
+
+    // 🔥 Update all allocations status (important)
+    await Allocation.updateMany(
+      { employee, month, year },
+      { status: utilization.status }
+    );
 
     res.status(201).json({
-      message: "Allocation Created Successfully",
-      data: newAllocation,
+      allocation,
+      warning,
+      ...utilization,
     });
   } catch (err) {
-    console.error("CREATE ERROR:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(400).json({ message: err.message });
   }
 };
 
-/* ================= GET ALL ================= */
-
+/* =========================================================
+   ✅ GET ALL ALLOCATIONS
+========================================================= */
 export const getAllocations = async (req, res) => {
   try {
-    let query = {};
+    const data = await Allocation.find()
+      .populate("employee", "name employeeId")
+      .populate("project", "name type");
 
-    // Employee → only their data
-    if (req.user.role === "Employee") {
-      query.employee = req.user.id;
-    }
-
-    const allocations = await Allocation.find(query)
-      .populate("employee", "name email")
-      .populate("project", "name billingType");
-
-    res.json({
-      count: allocations.length,
-      data: allocations,
-    });
+    res.json(data);
   } catch (err) {
-    console.error("GET ERROR:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-/* ================= GET ONE ================= */
-
-export const getAllocationById = async (req, res) => {
-  try {
-    const allocation = await Allocation.findById(req.params.id)
-      .populate("employee", "name")
-      .populate("project", "name billingType");
-
-    if (!allocation) {
-      return res.status(404).json({ error: "Allocation NOT Found" });
-    }
-
-    // Employee restriction
-    if (
-      req.user.role === "Employee" &&
-      allocation.employee._id.toString() !== req.user.id
-    ) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
-
-    res.json(allocation);
-  } catch (err) {
-    res.status(500).json({ error: "Server Error" });
-  }
-};
-
-/* ================= UPDATE ================= */
-
+/* =========================================================
+   ✅ UPDATE ALLOCATION (FIXED LOGIC)
+========================================================= */
 export const updateAllocation = async (req, res) => {
   try {
-    const allocationId = req.params.id;
+    const allocation = await Allocation.findById(req.params.id);
 
-    const existing = await Allocation.findById(allocationId);
-
-    if (!existing) {
-      return res.status(404).json({ error: "Allocation NOT Found" });
+    if (!allocation) {
+      return res.status(404).json({ message: "Allocation not found" });
     }
 
-    const {
-      employee = existing.employee,
-      project = existing.project,
-      allocation = existing.allocation,
-      startDate = existing.startDate,
-      endDate = existing.endDate,
-    } = req.body;
+    const { fte } = req.body;
 
-    // 🔹 Date validation
-    if (new Date(startDate) > new Date(endDate)) {
-      return res.status(400).json({
-        error: "Start Date cannot be after End Date",
+    if (fte !== undefined) {
+      if (fte <= 0) {
+        return res.status(400).json({
+          message: "FTE must be greater than 0",
+        });
+      }
+
+      if (fte > 160) {
+        return res.status(400).json({
+          message: "Single allocation cannot exceed 160 hrs",
+        });
+      }
+
+      // 🔥 FIXED CALCULATION
+      const existing = await Allocation.find({
+        employee: allocation.employee,
+        month: allocation.month,
+        year: allocation.year,
+        _id: { $ne: allocation._id },
+      });
+
+      const existingTotal = existing.reduce(
+        (sum, a) => sum + (a.fte || 0),
+        0
+      );
+
+      const newTotalFTE = existingTotal + fte;
+
+      allocation.fte = fte;
+
+      const utilization = getUtilizationData(newTotalFTE);
+
+      allocation.status = utilization.status;
+
+      await allocation.save();
+
+      // 🔥 Update all related allocations
+      await Allocation.updateMany(
+        {
+          employee: allocation.employee,
+          month: allocation.month,
+          year: allocation.year,
+        },
+        { status: utilization.status }
+      );
+
+      return res.json({
+        allocation,
+        ...utilization,
       });
     }
 
-    // 🔥 Overlap check (exclude current record)
-    const overlaps = await getOverlappingAllocations(
-      employee,
-      startDate,
-      endDate,
-      allocationId
+    Object.assign(allocation, req.body);
+    await allocation.save();
+
+    res.json({ allocation });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+/* =========================================================
+   ✅ MOVE EMPLOYEE (SMART RM LOGIC)
+========================================================= */
+export const moveAllocation = async (req, res) => {
+  try {
+    const { allocationId, newProjectId } = req.body;
+
+    const allocation = await Allocation.findById(allocationId);
+
+    if (!allocation) {
+      return res.status(404).json({ message: "Allocation not found" });
+    }
+
+    const allocations = await Allocation.find({
+      employee: allocation.employee,
+      month: allocation.month,
+      year: allocation.year,
+    });
+
+    const totalFTE = allocations.reduce(
+      (sum, a) => sum + (a.fte || 0),
+      0
     );
 
-    // 🔥 Allocation validation
-    if (!validateAllocationLimit(overlaps, allocation)) {
-      return res.status(400).json({
-        error: "Total Allocation exceeds 100%",
-      });
-    }
+    const utilization = getUtilizationData(totalFTE);
 
-    const updated = await Allocation.findByIdAndUpdate(
-      allocationId,
-      {
-        employee,
-        project,
-        allocation,
-        startDate,
-        endDate,
-      },
-      { new: true }
-    )
-      .populate("employee", "name")
-      .populate("project", "name billingType");
+    allocation.project = newProjectId;
+    await allocation.save();
 
     res.json({
-      message: "Updated Successfully",
-      data: updated,
+      message: "Moved successfully",
+      allocation,
+      ...utilization,
+      movementType:
+        totalFTE === 160
+          ? "Planned Rotation"
+          : totalFTE < 160
+          ? "Partial Allocation Shift"
+          : "Overload Redistribution",
+      note:
+        utilization.remainingHours > 0
+          ? "Employee still has free capacity"
+          : "Fully utilized resource moved strategically",
     });
   } catch (err) {
-    console.error("UPDATE ERROR:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(400).json({ message: err.message });
   }
 };
 
-/* ================= DELETE ================= */
-
+/* =========================================================
+   ✅ DELETE
+========================================================= */
 export const deleteAllocation = async (req, res) => {
   try {
-    const deleted = await Allocation.findByIdAndDelete(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({ error: "Allocation NOT Found" });
-    }
-
-    res.json({ message: "Deleted Successfully" });
+    await Allocation.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-/* ================= EMPLOYEE: MY ALLOCATIONS ================= */
-
+/* =========================================================
+   ✅ GET MY ALLOCATIONS
+========================================================= */
 export const getMyAllocations = async (req, res) => {
   try {
-    const allocations = await Allocation.find({
-      employee: req.user.id
-    })
-      .populate("project", "name")
-      .sort({ startDate: -1 });
+    const employeeId = req.query.employeeId || req.user.id;
 
-    res.json({
-      count: allocations.length,
-      data: allocations,
-    });
+    const allocations = await Allocation.find({ employee: employeeId })
+      .populate("project", "name type");
+
+    res.json(allocations);
   } catch (err) {
-    console.error("MY ALLOC ERROR:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-
-/* ================= EMPLOYEE: ACTIVE ALLOCATIONS ================= */
-
+/* =========================================================
+   ✅ GET ACTIVE ALLOCATIONS
+========================================================= */
 export const getActiveAllocations = async (req, res) => {
   try {
     const today = new Date();
 
     const allocations = await Allocation.find({
-      employee: req.user.id,
       startDate: { $lte: today },
-      endDate: { $gte: today }
+      endDate: { $gte: today },
     })
-      .populate("project", "name")
-      .sort({ startDate: -1 });
+      .populate("employee", "name employeeId")
+      .populate("project", "name type");
 
-    res.json({
-      count: allocations.length,
-      data: allocations,
-    });
+    res.json(allocations);
   } catch (err) {
-    console.error("ACTIVE ERROR:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-
-/* ================= EMPLOYEE: UTILIZATION ================= */
-
+/* =========================================================
+   ✅ UTILIZATION API (FINAL DASHBOARD ENGINE)
+========================================================= */
 export const getUtilization = async (req, res) => {
   try {
-    const today = new Date();
+    const employeeId = req.query.employeeId || req.user.id;
+    const { month, year } = req.query;
+
+    if (!month || !year) {
+      return res.status(400).json({
+        message: "month and year are required",
+      });
+    }
 
     const allocations = await Allocation.find({
-      employee: req.user.id,
-      startDate: { $lte: today },
-      endDate: { $gte: today }
+      employee: employeeId,
+      month,
+      year,
     });
 
-    const total = allocations.reduce((sum, a) => sum + a.allocation, 0);
+    const totalFTE = allocations.reduce(
+      (sum, a) => sum + (a.fte || 0),
+      0
+    );
+
+    const utilization = getUtilizationData(totalFTE);
 
     res.json({
-      utilization: total,
-      status:
-        total > 100
-          ? "OVER_ALLOCATED"
-          : total === 100
-          ? "FULLY_ALLOCATED"
-          : "UNDER_ALLOCATED",
-      allocations: allocations.length
+      employeeId,
+      month,
+      year,
+      ...utilization,
     });
   } catch (err) {
-    console.error("UTILIZATION ERROR:", err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ message: err.message });
   }
 };

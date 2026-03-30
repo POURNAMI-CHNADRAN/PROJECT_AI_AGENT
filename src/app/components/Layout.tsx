@@ -1,3 +1,4 @@
+// src/components/Layout.tsx
 import React, { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/authContext";
@@ -20,6 +21,8 @@ import {
   Bell,
   User,
   LogOut,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -27,16 +30,19 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
 
-  if (!user) return null;
+  // ✅ ICON‑ONLY DEFAULT
+  const [expanded, setExpanded] = useState(false);
+
+  if (!user) return <div className="h-screen bg-neutral-50" />;
 
   const navItems = [
     { path: "/my-profile", label: "My Profile", icon: User, roles: ["Employee"] },
-    { path: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["Admin", "HR"] },
+    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["Admin", "HR"] },
     { path: "/departments", label: "Departments", icon: Building2, roles: ["Admin"] },
-    { path: "/employees", label: "Employees", icon: Users, roles: ["Admin", "HR"] },
+    { path: "/resources", label: "Resources", icon: Users, roles: ["Admin", "HR"] },
     { path: "/skills", label: "Skills", icon: Sparkles, roles: ["Admin", "HR"] },
     { path: "/clients", label: "Clients", icon: Briefcase, roles: ["Admin"] },
     { path: "/projects", label: "Projects", icon: FolderKanban, roles: ["Admin", "HR"] },
@@ -49,103 +55,98 @@ export default function Layout({ children }: LayoutProps) {
     { path: "/user-management", label: "User Management", icon: UserCog, roles: ["Admin"] },
   ];
 
-  const allowedNavItems = navItems.filter((i) => i.roles.includes(user.role));
-  const [open, setOpen] = useState(false);
+  const allowedNavItems = navItems.filter(n => n.roles.includes(user.role));
 
   return (
     <>
-      <div className="flex h-screen bg-neutral-50">
+      <div className="flex h-screen bg-neutral-50 overflow-hidden">
 
-        {/* SIDEBAR */}
-        <aside
-          className={`
-            fixed top-0 left-0 h-full z-50
-            ${open ? "w-60" : "w-20"}
-            bg-sky-200 text-sky-900
-            flex flex-col py-6 rounded-r-3xl shadow-xl
-            transition-all duration-300
-          `}
+      {/* SIDEBAR (ICON RAIL) */}
+      <aside
+        className={`
+          ${expanded ? "w-60" : "w-16"}
+          bg-sky-200 text-sky-900
+          flex flex-col
+          transition-all duration-300
+          shadow-xl
+        `}
+      >
+        {/* TOGGLE */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mx-auto mt-4 mb-4
+            w-8 h-8 bg-white rounded-full
+            flex items-center justify-center
+            shadow hover:scale-105 transition"
         >
-          <button
-            onClick={() => setOpen(!open)}
-            className="absolute -right-4 top-10 w-8 h-8 bg-white text-sky-800 rounded-full flex items-center justify-center shadow hover:scale-110 transition"
-          >
-            {open ? "<" : ">"}
-          </button>
+          {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+        </button>
 
-          <nav className={`flex-1 overflow-y-auto mt-4 ${open ? "px-4" : ""}`}>
-            <div className="flex flex-col gap-3">
-              {allowedNavItems.map((item) => {
-                const Icon = item.icon;
-                const active = location.pathname === item.path;
+        {/* NAV (FIXED: scroll enabled) */}
+        <nav className="flex-1 overflow-y-auto flex flex-col gap-2 px-1">
+          {allowedNavItems.map(item => {
+            const Icon = item.icon;
+            const active = location.pathname.startsWith(item.path);
 
-                return (
-                  <Link key={item.path} to={item.path} className="relative group">
-                    <div
-                      className={`
-                        flex items-center
-                        ${open ? "w-full pl-4 justify-start" : "w-12 mx-auto justify-center"}
-                        h-12 rounded-xl transition-all duration-300
-                        ${active ? "bg-white shadow-md" : "hover:bg-white/70"}
-                      `}
-                    >
-                      <Icon
-                        size={22}
-                        className={`transition duration-300 group-hover:scale-125 ${
-                          active ? "text-sky-800" : "text-sky-700"
-                        }`}
-                      />
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`
+                  w-full flex items-center
+                  h-12 rounded-lg
+                  ${expanded ? "px-4" : "justify-center"}
+                  transition-colors
+                  ${active ? "bg-white shadow-md" : "hover:bg-white/70"}
+                `}
+              >
+                <Icon
+                  size={22}
+                  className={`${active ? "text-sky-900" : "text-sky-700"}`}
+                />
 
-                      {open && (
-                        <span className={`ml-3 text-sm ${
-                          active ? "font-semibold text-sky-900" : "text-sky-800 group-hover:text-sky-900"
-                        }`}>
-                          {item.label}
-                        </span>
-                      )}
-                    </div>
-
-                    {active && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-lg"></div>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
-        </aside>
+                {expanded && (
+                  <span className="ml-3 text-sm font-medium text-sky-900">
+                    {item.label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
 
         {/* MAIN */}
-        <div className={`${open ? "ml-60" : "ml-20"} flex-1 flex flex-col transition-all duration-300`}>
+        <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* HEADER */}
-          <header className="h-16 bg-white border-b border-neutral-300 flex items-center justify-between px-6">
-            <img src="/LOGO.png" className="h-12 w-auto object-contain" />
+          <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6">
+            <img src="/LOGO.png" className="h-10 object-contain" />
 
             <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-neutral-200 bg-neutral-100 rounded-full transition">
-                <Bell className="w-5 h-5 text-neutral-700" />
+              <button className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200 transition">
+                <Bell className="w-5 h-5" />
               </button>
 
-              <button className="p-2 hover:bg-neutral-200 bg-neutral-100 rounded-full transition">
-                <User className="w-5 h-5 text-neutral-700" />
+              <button className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200 transition">
+                <User className="w-5 h-5" />
               </button>
 
-              <Link
-                to="/"
-                className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm transition"
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut size={16} />
                 Logout
-              </Link>
+              </button>
             </div>
           </header>
 
+          {/* CONTENT */}
           <main className="flex-1 overflow-auto p-6">{children}</main>
         </div>
       </div>
 
-      {/* ✅ Chatbot added globally */}
       <Chatbot />
     </>
   );

@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-// ✅ 1. DEFINE SCHEMA FIRST
 const employeeSchema = new mongoose.Schema(
   {
     employeeId: {
@@ -47,6 +46,36 @@ const employeeSchema = new mongoose.Schema(
       required: true,
     },
 
+    // 🔥 NEW
+    workCategory: {
+      type: String,
+      enum: ["Development", "QA", "DevOps", "Design", "Management", "Support"],
+      default: "Development",
+    },
+
+    skills: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Skill",
+      },
+    ],
+
+    experience: {
+      type: Number, // years
+      default: 0,
+    },
+
+    reportingManager: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee",
+    },
+
+    ratePerHour: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
     location: {
       type: String,
       required: true,
@@ -58,12 +87,6 @@ const employeeSchema = new mongoose.Schema(
       required: true,
     },
 
-    costPerMonth: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
     status: {
       type: String,
       enum: ["Active", "Inactive"],
@@ -73,18 +96,17 @@ const employeeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ 2. PASSWORD HASHING
+// 🔐 Password hashing
 employeeSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 
-// ✅ 3. HIDE PASSWORD IN RESPONSE
+// 🚫 Hide password
 employeeSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
   return obj;
 };
 
-// ✅ 4. EXPORT MODEL
 export default mongoose.model("Employee", employeeSchema);

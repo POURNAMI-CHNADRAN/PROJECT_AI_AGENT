@@ -1,9 +1,8 @@
 import express from "express";
 import {
-  getProfile,
-  getAllEmployees,
   getEmployees,
   getOne,
+  getProfile,
   createEmployee,
   update,
   remove
@@ -19,111 +18,44 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/*
-|--------------------------------------------------------------------------
-|  SEED ADMIN (first user) - PUBLIC
-|--------------------------------------------------------------------------
-*/
+/* ---------------- PUBLIC ---------------- */
 router.post("/seed_admin", createEmployee);
 
-/*
-|--------------------------------------------------------------------------
-|  CREATE EMPLOYEE  (Admin, HR)
-|--------------------------------------------------------------------------
-*/
-router.post(
-  "/",
-  protect,
-  authorize("Admin", "HR"),
-  createEmployee
-);
+/* ---------------- CREATE ---------------- */
+router.post("/", protect, authorize("Admin", "HR"), createEmployee);
 
-/*
-|--------------------------------------------------------------------------
-|  GET ALL EMPLOYEES (Admin, HR, Manager)
-|--------------------------------------------------------------------------
-*/
-router.get(
-  "/",
-  protect,
-  authorize("Admin", "HR", "Manager"),
-  getAllEmployees
-);
+/* ---------------- READ ---------------- */
+router.get("/", protect, authorize("Admin", "HR", "Manager"), getEmployees);
 
-/*
-|--------------------------------------------------------------------------
-|  GET LOGGED-IN EMPLOYEE PROFILE
-|--------------------------------------------------------------------------
-*/
-router.get(
-  "/me",
-  protect,
-  getEmployees
-);
+// ✅ Logged-in user profile
+router.get("/me", protect, getProfile);
 
-/*
-|--------------------------------------------------------------------------
-|  🔥 EMPLOYEE ALLOCATION ROUTES (PUT BEFORE :id)
-|--------------------------------------------------------------------------
-*/
+/* ---------------- SELF ALLOCATION ---------------- */
 
-// ✅ Get all allocations of logged-in employee
-router.get(
-  "/allocations",
-  protect,
-  authorize("Employee"),
-  getMyAllocations
-);
+// Inject employeeId from token
+router.get("/allocations", protect, authorize("Employee"), (req, res) => {
+  req.params.employeeId = req.user.id;
+  return getMyAllocations(req, res);
+});
 
-// ✅ Get ACTIVE allocations
-router.get(
-  "/allocations/active",
-  protect,
-  authorize("Employee"),
-  getActiveAllocations
-);
+router.get("/allocations/active", protect, authorize("Employee"), (req, res) => {
+  req.params.employeeId = req.user.id;
+  return getActiveAllocations(req, res);
+});
 
-// ✅ Get utilization %
-router.get(
-  "/allocations/utilization",
-  protect,
-  authorize("Employee"),
-  getUtilization
-);
+router.get("/allocations/utilization", protect, authorize("Employee"), (req, res) => {
+  req.params.employeeId = req.user.id;
+  return getUtilization(req, res);
+});
 
-/*
-|--------------------------------------------------------------------------
-|  GET SINGLE EMPLOYEE BY ID
-|--------------------------------------------------------------------------
-*/
-router.get(
-  "/:id",
-  protect,
-  getOne
-);
+/* ---------------- ADMIN / HR / MANAGER ---------------- */
+router.get("/:id/allocations", protect, authorize("Admin", "HR", "Manager"), getOne);
 
-/*
-|--------------------------------------------------------------------------
-|  UPDATE EMPLOYEE
-|--------------------------------------------------------------------------
-*/
-router.patch(
-  "/:id",
-  protect,
-  authorize("Admin", "HR", "Employee"),
-  update
-);
+router.patch("/:id", protect, authorize("Admin", "HR"), update);
 
-/*
-|--------------------------------------------------------------------------
-|  DELETE EMPLOYEE
-|--------------------------------------------------------------------------
-*/
-router.delete(
-  "/:id",
-  protect,
-  authorize("Admin"),
-  remove
-);
+router.delete("/:id", protect, authorize("Admin"), remove);
+
+/* ---------------- SINGLE ---------------- */
+router.get("/:id", protect, authorize("Admin", "HR", "Manager", "Employee"), getOne);
 
 export default router;
