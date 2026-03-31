@@ -106,7 +106,7 @@ export default function Billing() {
     setLoading(true);
     try {
       const [billRes, projRes, empRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/billing/all`, { headers }),
+        axios.get(`${API_BASE}/api/billing`, { headers }),
         axios.get(`${API_BASE}/api/projects`, { headers }),
         axios.get(`${API_BASE}/api/employees`, { headers }),
       ]);
@@ -115,7 +115,7 @@ export default function Billing() {
       setProjects(projRes.data?.data || projRes.data || []);
       setEmployees(empRes.data?.data || empRes.data || []);
     } catch (err) {
-      console.error("Load error:", err);
+      console.error("Load Error:", err);
     } finally {
       setLoading(false);
     }
