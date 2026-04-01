@@ -1,0 +1,26 @@
+import mongoose from "mongoose";
+
+const workcategorySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    minlength: 2,
+    maxlength: 50,
+    match: [/^[A-Za-z\s]+$/, "Only letters and spaces allowed"]
+  },
+
+  description: String,
+
+  managerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Employee",
+    default: null
+  }
+}, 
+{ 
+  timestamps: true 
+});
+
+export default mongoose.model("WorkCategory", workcategorySchema);

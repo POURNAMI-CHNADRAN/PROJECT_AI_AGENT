@@ -214,9 +214,7 @@ import RoleRoute from "../auth/RoleRoute";
 /* Pages */
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Resources from "./pages/Resources";
-import ResourceDetails from "./pages/ResourceDetails";
-import Departments from "./pages/Departments";
+import Departments from "./pages/Sections";
 import Skills from "./pages/Skills";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
@@ -228,23 +226,26 @@ import Reports from "./pages/Reports";
 import AIInsights from "./pages/AIInsights";
 import UserManagement from "./pages/UserManagement";
 import MyProfile from "./pages/MyProfile";
-import ResourcesLayout from "./components/ResourcesLayout";
 
 /* Resource Planning */
+import { CreateEmployeeModal } from "./components/Employees";
 import { PortfolioDashboard } from "./pages/PortfolioDashboard";
-import { HeatmapScheduler } from "./pages/HeatmapScheduler";
+import  HeatmapScheduler  from "./pages/HeatmapScheduler";
 import { WorkloadManager } from "./pages/WorkloadManager";
 
-/* Layout */
+/* Layouts */
 import Layout from "./components/Layout";
+import ResourcesLayout from "./components/ResourcesLayout";
+import EmployeesPage from "./pages/EmployeePage";
 
 export default function App() {
   return (
     <Routes>
+
       {/* ---------- Public ---------- */}
       <Route path="/login" element={<Login />} />
 
-      {/* ---------- Protected Layout ---------- */}
+      {/* ---------- Protected App Layout ---------- */}
       <Route
         path="/"
         element={
@@ -256,10 +257,19 @@ export default function App() {
         {/* Default */}
         <Route index element={<Navigate to="/dashboard" replace />} />
 
-        {/* Core */}
+        {/* Core Pages */}
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="resources" element={<Resources />} />
-        <Route path="resources/:id" element={<ResourceDetails />} />
+
+        {/* ✅ RESOURCES HUB */}
+        <Route path="resources" element={<ResourcesLayout />}>
+          <Route index element={<Navigate to="employees" replace />} />
+          <Route path="employees" element={<EmployeesPage />} />
+          <Route path="portfolio" element={<PortfolioDashboard />} />
+          <Route path="heatmap" element={<HeatmapScheduler />} />
+          <Route path="workload" element={<WorkloadManager />} />
+        </Route>
+
+        {/* Other Modules */}
         <Route path="departments" element={<Departments />} />
         <Route path="skills" element={<Skills />} />
         <Route path="clients" element={<Clients />} />
@@ -272,19 +282,11 @@ export default function App() {
         <Route path="ai-insights" element={<AIInsights />} />
         <Route path="user-management" element={<UserManagement />} />
         <Route path="my-profile" element={<MyProfile />} />
-
-        {/* ✅ RESOURCE PLANNING (FIXED) */}
-
-        <Route path="resources" element={<ResourcesLayout />}>
-          <Route path="portfolio" element={<PortfolioDashboard />} />
-          <Route path="heatmap" element={<HeatmapScheduler />} />
-          <Route path="workload" element={<WorkloadManager />} />
-        </Route>
-
       </Route>
 
       {/* ---------- Fallback ---------- */}
       <Route path="*" element={<Navigate to="/login" replace />} />
+
     </Routes>
   );
 }

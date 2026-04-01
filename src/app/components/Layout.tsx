@@ -292,8 +292,8 @@ export default function Layout() {
         <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* HEADER */}
-          <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6">
-            <img src="/LOGO.png" className="h-10 object-contain" />
+          <header className="h-18 bg-white border-b border-neutral-200 flex items-center justify-between px-6">
+            <img src="/LOGO.png" className="h-18 object-contain" />
 
             <div className="flex items-center gap-4">
               <button className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200">

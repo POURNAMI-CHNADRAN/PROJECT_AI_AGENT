@@ -71,7 +71,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Resources";
 import EmployeeProfile from "./pages/EmployeeProfile";
-import Departments from "./pages/Departments";
+import Departments from "./pages/Sections";
 import Skills from "./pages/Skills";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";

@@ -39,6 +39,7 @@ const allocationSchema = new mongoose.Schema(
       default: true,
     },
 
+    // ✅ DERIVED — NOT USER INPUT
     startDate: {
       type: Date,
       required: true,
@@ -53,33 +54,42 @@ const allocationSchema = new mongoose.Schema(
 );
 
 /* =========================================================
-   🔒 DATA INTEGRITY RULES
+   🔒 DATA INTEGRITY — MONTHLY ALLOCATION GUARANTEE
 ========================================================= */
-allocationSchema.pre("validate", async function () {
-  const start = new Date(this.startDate);
-  const end = new Date(this.endDate);
+allocationSchema.pre("validate", function () {
+  // ✅ Derive dates from month/year EVERY time
+  this.startDate = new Date(this.year, this.month - 1, 1);
+  this.endDate = new Date(this.year, this.month, 0);
 
-  // ❌ Prevent multi-month allocations
+  // ✅ Safety (defensive)
   if (
-    start.getUTCMonth() !== end.getUTCMonth() ||
-    start.getUTCFullYear() !== end.getUTCFullYear()
+    this.startDate.getMonth() !== this.endDate.getMonth() ||
+    this.startDate.getFullYear() !== this.endDate.getFullYear()
   ) {
     throw new Error("Allocation cannot span multiple months");
   }
 
-  // ❌ Prevent mismatch between month/year and dates
+  // ✅ Ensure perfect alignment
   if (
-    start.getUTCMonth() + 1 !== this.month ||
-    start.getUTCFullYear() !== this.year
+    this.startDate.getMonth() + 1 !== this.month ||
+    this.startDate.getFullYear() !== this.year
   ) {
-    throw new Error("month/year must match Start Date");
+    throw new Error("Allocation month/year mismatch");
   }
 });
 
-// ✅ Prevent duplicate allocations for same month/project
+/* =========================================================
+   ✅ INDEXES
+========================================================= */
+
+// ✅ Prevent duplicate allocations per month
 allocationSchema.index(
   { employee: 1, project: 1, month: 1, year: 1 },
   { unique: true }
 );
+
+// ✅ Faster lookups
+allocationSchema.index({ project: 1 });
+allocationSchema.index({ employee: 1, month: 1, year: 1 });
 
 export default mongoose.model("Allocation", allocationSchema);

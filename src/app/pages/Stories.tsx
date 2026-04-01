@@ -215,9 +215,9 @@ export default function Stories() {
             </div>
 
             <div>
-              <h1 className="text-3xl font-bold">Story Management</h1>
+              <h1 className="text-3xl font-bold">FTE Management</h1>
               <p className="text-sky-700 text-sm">
-                Manage stories, sprint tasks & assignments
+                Manage FTE, tasks & assignments
               </p>
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function Stories() {
               }}
               className="px-5 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition flex items-center gap-2"
             >
-              <Plus size={18} /> Add Story
+              <Plus size={18} /> Add FTE
             </button>
           )}
         </div>

@@ -46,11 +46,10 @@ const employeeSchema = new mongoose.Schema(
       required: true,
     },
 
-    // 🔥 NEW
-    workCategory: {
-      type: String,
-      enum: ["Development", "QA", "DevOps", "Design", "Management", "Support"],
-      default: "Development",
+    workCategoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WorkCategory",
+      required: true,
     },
 
     skills: [

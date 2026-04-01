@@ -1,22 +1,35 @@
 import Employee from "../models/Employee.js";
 import Allocation from "../models/Allocation.js";
 import { Next } from "../utils/Next.js"; 
+import bcrypt from "bcryptjs";
 
-// ✅ CREATE EMPLOYEE
 export const createEmployee = async (req, res) => {
   try {
-    // 🔥 Generate employeeId automatically
     const employeeId = await Next();
 
+    // ✅ Generate default password if not provided
+    const plainPassword = req.body.password || "123456";
+
+    // ✅ Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(plainPassword, salt);
+
+    // ✅ Create employee
     const employee = new Employee({
       ...req.body,
-      employeeId
+      employeeId,
+      password: hashedPassword, 
     });
 
     await employee.save();
 
-    res.status(201).json(employee);
+    const employeeResponse = employee.toObject();
+    delete employeeResponse.password;
+
+    res.status(201).json(employeeResponse);
+
   } catch (error) {
+    console.error("Create Employee Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -25,17 +38,28 @@ export const createEmployee = async (req, res) => {
 export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find()
-      .populate("departmentId", "name");
+      .populate("departmentId", "name")
+      .populate("skills", "name")
+      .populate({
+        path: "workCategoryId",
+        select: "name",
+        options: { strictPopulate: false }, 
+      });
 
-    const allocations = await Allocation.find()
-      .populate("project", "name type");
+    const allocations = await Allocation.find().populate(
+      "project",
+      "name type"
+    );
 
     const result = employees.map((emp) => {
       const empAlloc = allocations.filter(
-        (a) => a.employee.toString() === emp._id.toString()
+        (a) => a.employee?.toString() === emp._id.toString()
       );
 
-      const totalFTE = empAlloc.reduce((sum, a) => sum + a.fte, 0);
+      const totalFTE = empAlloc.reduce(
+        (sum, a) => sum + (a.fte || 0),
+        0
+      );
 
       let status = "Optimal";
       if (totalFTE < 160) status = "Underbilled";
@@ -43,15 +67,17 @@ export const getEmployees = async (req, res) => {
 
       return {
         ...emp.toObject(),
+        workCategoryName: emp.workCategoryId?.name || null, // ✅ flatten for UI
         allocations: empAlloc,
         totalFTE,
         utilizationStatus: status,
       };
     });
 
-    res.json(result);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("GET /api/employees failed:", err);
+    res.status(200).json([]); // ✅ NEVER break frontend
   }
 };
 

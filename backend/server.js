@@ -18,7 +18,7 @@ import authRoutes from "./routes/authRoutes.js";
 import chatRoutes from "./routes/chat.js";
 import payrollRoutes from "./routes/payrollRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
-
+import workcategoryRoutes from "./routes/workcategoryRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -43,6 +43,7 @@ app.use("/api/billing", billingRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/workcategories", workcategoryRoutes);
 
 // Also serve uploads directory statically
 app.use("/uploads", express.static("uploads"));
