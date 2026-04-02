@@ -1,13 +1,24 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Department, Employee } from "../data/mock-data";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { cn } from "./ui/utils";
 
 interface EmployeeSidebarProps {
-  departments: Department[];
+  departments: SidebarDepartment[];
   selectedEmployeeId?: string;
   onEmployeeSelect?: (employeeId: string) => void;
+}
+
+export interface SidebarEmployee {
+  _id: string;
+  name: string;
+  role?: string;
+}
+
+export interface SidebarDepartment {
+  _id: string;
+  name: string;
+  employees: SidebarEmployee[];
 }
 
 export function EmployeeSidebar({ 
@@ -16,7 +27,7 @@ export function EmployeeSidebar({
   onEmployeeSelect 
 }: EmployeeSidebarProps) {
   const [expandedDepts, setExpandedDepts] = useState<Set<string>>(
-    new Set(departments.map(d => d.id))
+    new Set(departments.map(d => d._id))
   );
 
   const toggleDepartment = (deptId: string) => {
@@ -36,12 +47,12 @@ export function EmployeeSidebar({
       </div>
       <div className="p-2">
         {departments.map((dept) => (
-          <div key={dept.id} className="mb-2">
+          <div key={dept._id} className="mb-2">
             <button
-              onClick={() => toggleDepartment(dept.id)}
+              onClick={() => toggleDepartment(dept._id)}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
             >
-              {expandedDepts.has(dept.id) ? (
+              {expandedDepts.has(dept._id) ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
                 <ChevronRight className="h-4 w-4" />
@@ -52,23 +63,23 @@ export function EmployeeSidebar({
               </span>
             </button>
             
-            {expandedDepts.has(dept.id) && (
+            {expandedDepts.has(dept._id) && (
               <div className="ml-4 mt-1 space-y-1">
                 {dept.employees.map((employee) => (
                   <button
-                    key={employee.id}
-                    onClick={() => onEmployeeSelect?.(employee.id)}
+                    key={employee._id}
+                    onClick={() => onEmployeeSelect?.(employee._id)}
                     className={cn(
                       "flex items-center gap-3 w-full px-3 py-2 text-sm rounded-lg transition-colors",
-                      selectedEmployeeId === employee.id
+                      selectedEmployeeId === employee._id
                         ? "bg-blue-50 text-blue-700"
                         : "text-gray-700 hover:bg-gray-50"
                     )}
                   >
                     <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                        {employee.avatar}
-                      </AvatarFallback>
+                    <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+                      {employee.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 text-left">
                       <div className="font-medium">{employee.name}</div>

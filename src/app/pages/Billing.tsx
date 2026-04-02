@@ -377,7 +377,7 @@ const monthlyTrend = useMemo<ChartData<"line">>(() => {
             <Users size={28} className="text-sky-700" />
           </div>
           <div>
-            <h1 className="text-3xl font-semibold">Billing & Revenue Dashboard</h1>
+            <h1 className="text-3xl font-bold">Billing & Revenue Dashboard</h1>
             <p className="text-sky-700 text-sm mt-1">
               View project revenue, performance analytics & billing reports
             </p>

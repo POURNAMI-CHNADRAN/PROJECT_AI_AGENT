@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/authContext";
 
 // API base resolution (Vite / CRA)
 let API_BASE = "http://localhost:5000";
@@ -15,6 +16,7 @@ try {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,36 +28,34 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const lastRoute = localStorage.getItem("lastRoute");
 
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Invalid Email or Password");
+  try {
+    const success = await login(email, password);
 
-      if (data?.token) localStorage.setItem("token", data.token);
-      if (data?.user) localStorage.setItem("user", JSON.stringify(data.user));
-
-      if (data?.user?.role === "Employee") {
-        navigate("/my-profile");
-      } else {
-        navigate("/dashboard");
-      }
-    } catch (err: any) {
-      setError(err?.message || "Something went wrong. Please try again.");
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (!success) {
+      throw new Error("Invalid Email or Password");
     }
-  };
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    if (user.role === "Employee") {
+      navigate("/my-profile", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+
+  } catch (err: any) {
+    setError(err.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // 🎨 LIGHT SKY BLUE THEME (NO GRADIENT)
   const styles = {

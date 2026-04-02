@@ -90,7 +90,7 @@ import { useMemo, useState } from "react";
 import { Clock, DollarSign, Users, TrendingUp, Plus } from "lucide-react";
 
 import { useResourceData } from "../../hooks/useResourceData";
-import EmployeeDrawer from "./EmployeeProfile";
+import EmployeeDrawer from "../components/EmployeeDrawer";
 import { KpiCard } from "../components/KPICard";
 import { ResourcePlanningGrid } from "../components/PlannerGrid";
 import { AllocateModal } from "../components/AllocateModal";

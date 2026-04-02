@@ -25,7 +25,7 @@ interface MasterSectionProps<T extends { _id: string; name: string }> {
 
 /* ================= MAIN ================= */
 
-export default function Sections() {
+export default function Segmentations() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
   const token = localStorage.getItem("token");
 

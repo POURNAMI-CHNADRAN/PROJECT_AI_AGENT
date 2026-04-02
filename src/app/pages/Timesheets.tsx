@@ -339,7 +339,7 @@ const rejectTimesheet = async (id: string) => {
           <ClipboardList size={28} className="text-sky-700" />
         </div>
         <div>
-          <h1 className="text-3xl font-semibold text-sky-900">
+          <h1 className="text-3xl font-bold text-sky-900">
             Timesheets
           </h1>
           <p className="text-sky-700">Track story-point submissions</p>

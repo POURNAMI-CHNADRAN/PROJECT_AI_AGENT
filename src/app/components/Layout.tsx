@@ -41,7 +41,7 @@
 //   const navItems = [
 //     { path: "/my-profile", label: "My Profile", icon: User, roles: ["Employee"] },
 //     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["Admin", "HR"] },
-//     { path: "/departments", label: "Departments", icon: Building2, roles: ["Admin"] },
+//     { path: "/segmentations", label: "Segmentations", icon: Building2, roles: ["Admin"] },
 //     { path: "/resources", label: "Resources", icon: Users, roles: ["Admin", "HR"] },
 //     { path: "/skills", label: "Skills", icon: Sparkles, roles: ["Admin", "HR"] },
 //     { path: "/clients", label: "Clients", icon: Briefcase, roles: ["Admin"] },
@@ -157,6 +157,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/authContext";
 import Chatbot from "./Chatbot";
 import { cn } from "./ui/utils";
+// import RouteTracker from "./RouteTracker";
 
 import {
   LayoutDashboard,
@@ -181,11 +182,19 @@ import {
 } from "lucide-react";
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
 
-  if (!user) return <div className="h-screen bg-neutral-50" />;
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-neutral-50">
+        <span className="text-neutral-400">Loading...</span>
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   /* ================= NAV ITEMS ================= */
 
@@ -193,7 +202,7 @@ export default function Layout() {
     // ✅ CORE SYSTEM
     { path: "/my-profile", label: "My Profile", icon: User, roles: ["Employee"] },
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["Admin","HR"] },
-    { path: "/departments", label: "Departments", icon: Building2, roles: ["Admin"] },
+    { path: "/segmentations", label: "Segmentations", icon: Building2, roles: ["Admin"] },
     { path: "/resources/portfolio", label: "Resources", icon: Users, roles: ["Admin","HR"] },
     { path: "/skills", label: "Skills", icon: Sparkles, roles: ["Admin","HR"] },
     { path: "/clients", label: "Clients", icon: Briefcase, roles: ["Admin"] },
@@ -313,6 +322,7 @@ export default function Layout() {
 
           {/* ✅ ROUTER CONTENT */}
           <main className="flex-1 overflow-auto p-6">
+            {/* <RouteTracker /> */}
             <Outlet />
           </main>
         </div>

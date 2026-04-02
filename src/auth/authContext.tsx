@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 interface User {
   id: string;
@@ -10,37 +10,34 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  initialized: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  // ✅ SAFE REHYDRATION (FIX FOR YOUR ISSUE)
-    useEffect(() => {
-      const savedToken = localStorage.getItem("token");
-      const savedUser = localStorage.getItem("user");
+  // ✅ RESTORE SESSION ON REFRESH
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    const savedToken = localStorage.getItem("token");
 
-      if (savedToken && savedUser) {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-      }
+    if (savedUser && savedToken) {
+      setUser(JSON.parse(savedUser));
+      setToken(savedToken);
+    }
 
-      setInitialized(true);
-      setLoading(false);
-    }, []);
+    setLoading(false);
+  }, []);
 
-  // LOGIN
+  // ✅ LOGIN
   const login = async (email: string, password: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -50,7 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const data = await res.json();
-
       if (!res.ok) return false;
 
       setUser(data.user);
@@ -60,23 +56,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem("token", data.token);
 
       return true;
-    } catch (err) {
+    } catch {
       return false;
     }
   };
 
-  // LOGOUT
+  // ✅ LOGOUT (ONLY HERE)
   const logout = () => {
-    localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     setUser(null);
     setToken(null);
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, token, loading, initialized, login, logout }}
-    >
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

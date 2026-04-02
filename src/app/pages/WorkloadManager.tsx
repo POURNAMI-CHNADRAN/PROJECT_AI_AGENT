@@ -17,7 +17,7 @@ export function WorkloadManager() {
 
   // ✅ Use the same enriched data as HeatmapScheduler
   const { employees, departments, loading } =
-    useResourceHeatmapData(0, year);
+    useResourceHeatmapData(year);
 
   const [selectedEmployee, setSelectedEmployee] =
     useState<Employee | null>(null);

@@ -91,7 +91,7 @@ export default function ResourcesLayout() {
       {/* ===== HEADER ===== */}
       <div className="bg-white border-b border-sky-100 px-6 py-4 flex items-center gap-6">
         <div>
-          <h1 className="text-lg font-semibold text-sky-900">Resource Hub</h1>
+          <h1 className="text-lg font-bold text-sky-900">Resource Hub</h1>
           <p className="text-xs text-sky-600">
             Employees • Planning • Utilization
           </p>

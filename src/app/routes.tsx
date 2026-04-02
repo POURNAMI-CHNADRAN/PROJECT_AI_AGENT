@@ -71,7 +71,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Resources";
 import EmployeeProfile from "./pages/EmployeeProfile";
-import Departments from "./pages/Sections";
+import Segmentations from "./pages/Segmentations";
 import Skills from "./pages/Skills";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
@@ -85,47 +85,46 @@ import UserManagement from "./pages/UserManagement";
 
 /* RESOURCE PLANNING */
 import { PortfolioDashboard } from "./pages/PortfolioDashboard";
-import { HeatmapScheduler } from "./pages/HeatmapScheduler";
+import HeatmapScheduler from "./pages/HeatmapScheduler";
 import { WorkloadManager } from "./pages/WorkloadManager";
 
 export const router = createBrowserRouter([
   /* LOGIN */
   {
     path: "/login",
-    Component: Login,
+    element: <Login />,
   },
 
   /* APP LAYOUT */
   {
     path: "/",
-    Component: Layout,
+    element: <Layout />,
     children: [
-      /* ✅ DEFAULT LANDING (SAFE REDIRECT) */
       {
         index: true,
         loader: () => redirect("/dashboard"),
       },
 
       /* CORE SYSTEM */
-      { path: "dashboard", Component: Dashboard },
-      { path: "employees", Component: Employees },
-      { path: "employees/:id", Component: EmployeeProfile },
-      { path: "departments", Component: Departments },
-      { path: "skills", Component: Skills },
-      { path: "clients", Component: Clients },
-      { path: "projects", Component: Projects },
-      { path: "stories", Component: Stories },
-      { path: "resource-allocation", Component: ResourceAllocation },
-      { path: "timesheets", Component: Timesheets },
-      { path: "billing", Component: Billing },
-      { path: "reports", Component: Reports },
-      { path: "ai-insights", Component: AIInsights },
-      { path: "user-management", Component: UserManagement },
+      { path: "dashboard", element: <Dashboard /> },
+      { path: "employees", element: <Employees /> },
+      { path: "employees/:id", element: <EmployeeProfile /> },
+      { path: "segmentations", element: <Segmentations /> },
+      { path: "skills", element: <Skills /> },
+      { path: "clients", element: <Clients /> },
+      { path: "projects", element: <Projects /> },
+      { path: "stories", element: <Stories /> },
+      { path: "resource-allocation", element: <ResourceAllocation /> },
+      { path: "timesheets", element: <Timesheets /> },
+      { path: "billing", element: <Billing /> },
+      { path: "reports", element: <Reports /> },
+      { path: "ai-insights", element: <AIInsights /> },
+      { path: "user-management", element: <UserManagement /> },
 
       /* RESOURCE PLANNING */
-      { path: "portfolio", Component: PortfolioDashboard },
-      { path: "heatmap", Component: HeatmapScheduler },
-      { path: "workload", Component: WorkloadManager },
+      { path: "portfolio", element: <PortfolioDashboard /> },
+      { path: "heatmap", element: <HeatmapScheduler /> },
+      { path: "workload", element: <WorkloadManager /> },
     ],
   },
 ]);

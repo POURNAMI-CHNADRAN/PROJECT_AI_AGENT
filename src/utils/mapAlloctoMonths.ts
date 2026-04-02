@@ -3,28 +3,29 @@ export function mapAllocationsToMonths(
   employee: any,
   months: any[]
 ) {
-  return months.map((m) => {
-    const empAllocs = allocations.filter(
-      (a) =>
-        (a.employee === employee._id ||
-         a.employee?._id === employee._id) &&
-        a.month === m.month
-    );
+  const empId = String(employee._id);
+
+  return months.map(m => {
+    const empAllocs = allocations.filter(a => {
+      const allocEmpId = a.employee?._id
+        ? String(a.employee._id)
+        : String(a.employee);
+
+      return allocEmpId === empId && Number(a.month) === Number(m.month);
+    });
 
     const totalHours = empAllocs.reduce(
-      (sum, a) => sum + a.fte,
+      (sum, a) => sum + Number(a.fte || 0),
       0
     );
 
     const billableHours = empAllocs
-      .filter((a) => a.isBillable)
-      .reduce((sum, a) => sum + a.fte, 0);
-
-    const rate = employee.ratePerHour || 0;
+      .filter(a => a.isBillable)
+      .reduce((sum, a) => sum + Number(a.fte || 0), 0);
 
     return {
       hours: totalHours,
-      billableAmount: billableHours * rate,
+      billableAmount: billableHours * (employee.ratePerHour || 0),
     };
   });
 }

@@ -6,32 +6,19 @@ import {
   deleteAllocation,
   getMyAllocations,
   getUtilizationSummary,
-  getMonthlyAllocations
+  getYearlyAllocations,
 } from "../controllers/allocationController.js";
-
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/* =========================================================
-   ✅ CREATE / UPDATE / DELETE (ADMIN / HR)
-========================================================= */
+/* ✅ CRUD */
 router.post("/", protect, authorize("Admin", "HR"), createAllocation);
-
 router.patch("/:id", protect, authorize("Admin", "HR"), updateAllocation);
-
 router.post("/move", protect, authorize("Admin", "HR"), moveAllocation);
-
 router.delete("/:id", protect, authorize("Admin", "HR"), deleteAllocation);
 
-/* =========================================================
-   ✅ READ ALLOCATIONS
-========================================================= */
-
-// 🔹 Employee / Manager / HR / Admin
-// Supports:
-// - /api/allocations?employee=<id>
-// - /api/allocations?employeeId=<id>
+/* ✅ Reads */
 router.get(
   "/",
   protect,
@@ -39,23 +26,6 @@ router.get(
   getMyAllocations
 );
 
-// 🔹 Logged‑in employee (My Profile)
-// /api/allocations/me
-router.get(
-  "/me",
-  protect,
-  authorize("Employee"),
-  (req, res) => {
-    req.query.employee = req.user.id;
-    return getMyAllocations(req, res);
-  }
-);
-
-/* =========================================================
-   ✅ UTILIZATION SUMMARY
-========================================================= */
-
-// /api/allocations/utilization?employee=&month=&year=
 router.get(
   "/utilization",
   protect,
@@ -63,12 +33,11 @@ router.get(
   getUtilizationSummary
 );
 
-// GET /api/allocations/month?month=3&year=2026
 router.get(
-  "/month",
+  "/year",
   protect,
   authorize("Admin", "HR", "Manager"),
-  getMonthlyAllocations
+  getYearlyAllocations
 );
 
 export default router;

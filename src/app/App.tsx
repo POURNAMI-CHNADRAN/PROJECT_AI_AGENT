@@ -207,14 +207,13 @@
 //   );
 // }
 
-// App.tsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import RoleRoute from "../auth/RoleRoute";
 
 /* Pages */
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Departments from "./pages/Sections";
+import Segmentations from "./pages/Segmentations";
 import Skills from "./pages/Skills";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
@@ -228,39 +227,36 @@ import UserManagement from "./pages/UserManagement";
 import MyProfile from "./pages/MyProfile";
 
 /* Resource Planning */
-import { CreateEmployeeModal } from "./components/Employees";
+import EmployeesPage from "./pages/EmployeePage";
 import { PortfolioDashboard } from "./pages/PortfolioDashboard";
-import  HeatmapScheduler  from "./pages/HeatmapScheduler";
+import HeatmapScheduler from "./pages/HeatmapScheduler";
 import { WorkloadManager } from "./pages/WorkloadManager";
 
 /* Layouts */
 import Layout from "./components/Layout";
 import ResourcesLayout from "./components/ResourcesLayout";
-import EmployeesPage from "./pages/EmployeePage";
 
 export default function App() {
   return (
     <Routes>
 
-      {/* ---------- Public ---------- */}
+      {/* ✅ PUBLIC ROUTES */}
       <Route path="/login" element={<Login />} />
 
-      {/* ---------- Protected App Layout ---------- */}
+      {/* ✅ DEFAULT ENTRY */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+      {/* ✅ PROTECTED ROUTES */}
       <Route
-        path="/"
         element={
           <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
             <Layout />
           </RoleRoute>
         }
       >
-        {/* Default */}
-        <Route index element={<Navigate to="/dashboard" replace />} />
-
-        {/* Core Pages */}
         <Route path="dashboard" element={<Dashboard />} />
 
-        {/* ✅ RESOURCES HUB */}
+        {/* ✅ RESOURCE HUB */}
         <Route path="resources" element={<ResourcesLayout />}>
           <Route index element={<Navigate to="employees" replace />} />
           <Route path="employees" element={<EmployeesPage />} />
@@ -269,8 +265,8 @@ export default function App() {
           <Route path="workload" element={<WorkloadManager />} />
         </Route>
 
-        {/* Other Modules */}
-        <Route path="departments" element={<Departments />} />
+        {/* ✅ MASTER DATA */}
+        <Route path="segmentations" element={<Segmentations />} />
         <Route path="skills" element={<Skills />} />
         <Route path="clients" element={<Clients />} />
         <Route path="projects" element={<Projects />} />
@@ -284,7 +280,7 @@ export default function App() {
         <Route path="my-profile" element={<MyProfile />} />
       </Route>
 
-      {/* ---------- Fallback ---------- */}
+      {/* ✅ FALLBACK */}
       <Route path="*" element={<Navigate to="/login" replace />} />
 
     </Routes>
