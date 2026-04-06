@@ -100,7 +100,7 @@ export const getOne = async (req, res) => {
 // ✅ GET LOGGED-IN USER PROFILE
 export const getProfile = async (req, res) => {
   try {
-    const emp = await Employee.findById(req.user.id).select("-password");
+    const emp = await req.user.employeeId.select("-password");
 
     if (!emp) {
       return res.status(404).json({ message: "User NOT Found" });

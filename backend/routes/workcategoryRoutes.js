@@ -1,18 +1,24 @@
 import express from "express";
 import {
   createWorkCategory,
-  getWorkCategories,
-  deleteWorkCategory,
-} from "../controllers/workcategoryController.js";
+  getAllWorkCategories,
+  getWorkCategoryById,
+  updateWorkCategory,
+  deactivateWorkCategory
+} from "../controllers/workcategoryController.js"
 
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", protect, getWorkCategories);
+router.post("/", protect, authorize("Admin", "Finance"), createWorkCategory);
 
-router.post("/", protect, authorize("Admin"), createWorkCategory);
+router.get("/", protect, getAllWorkCategories);
 
-router.delete("/:id", protect, authorize("Admin"), deleteWorkCategory);
+router.get("/:id", protect, getWorkCategoryById);
+
+router.put("/:id", protect, authorize("Admin", "Finance"), updateWorkCategory);
+
+router.delete("/:id", protect, authorize("Admin", "Finance"), deactivateWorkCategory);
 
 export default router;

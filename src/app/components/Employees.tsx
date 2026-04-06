@@ -140,7 +140,7 @@ export function CreateEmployeeModal({
         >
           <option value="Employee">Employee</option>
           <option value="Admin">Admin</option>
-          <option value="HR">HR</option>
+          <option value="Finance">Finance</option>
         </select>
 
         {/* Department */}

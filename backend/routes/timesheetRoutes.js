@@ -18,16 +18,16 @@ const router = express.Router();
 // Employee submits
 router.post("/submit", protect, employeeOnly, submitTimesheet);
 
-// HR / Admin approves
+// Finance / Admin approves
 router.put("/approve/:id", protect, adminOrHROnly, approveTimesheet);
 
-// HR / Admin rejects
+// Finance / Admin rejects
 router.put("/reject/:id", protect, adminOrHROnly, rejectTimesheet);
 
 // Employee gets their own timesheets — REQUIRED for MyProfile.tsx
 router.get("/employee/:id", protect, getTimesheetsByEmployee);
 
-// HR/Admin history
+// Finance/Admin history
 router.get("/", protect, adminOrHROnly, getTimesheetHistory);
 
 export default router;

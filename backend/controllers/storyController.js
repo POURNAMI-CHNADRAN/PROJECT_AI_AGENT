@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Story from "../models/Story.js";
 
 /* ============================================================
-   CREATE STORY (Admin + HR)
+   CREATE STORY (Admin + Finance)
 ============================================================ */
 export const create = async (req, res) => {
   try {
@@ -28,7 +28,7 @@ export const create = async (req, res) => {
 
 
 /* ============================================================
-   GET ALL STORIES (Admin + HR)
+   GET ALL STORIES (Admin + Finance)
 ============================================================ */
 export const getAll = async (req, res) => {
   try {
@@ -130,10 +130,10 @@ export const remove = async (req, res) => {
     const story = await Story.findById(req.params.id);
     if (!story) return res.status(404).json({ error: "Story NOT Found" });
 
-    // HR rule — only delete TO_DO
-    if (req.user.role === "HR" && story.status !== "TO_DO") {
+    // Finance rule — only delete TO_DO
+    if (req.user.role === "Finance" && story.status !== "TO_DO") {
       return res.status(403).json({
-        error: "HR can delete only TO-DO stories"
+        error: "Finance can delete only TO-DO stories"
       });
     }
 

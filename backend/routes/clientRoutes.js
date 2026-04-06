@@ -11,13 +11,13 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Admin + HR can manage clients
-router.post("/", protect, authorize("Admin", "HR"), createClient);
-router.patch("/:id", protect, authorize("Admin", "HR"), updateClient);
+// Admin + Finance can manage clients
+router.post("/", protect, authorize("Admin", "Finance"), createClient);
+router.patch("/:id", protect, authorize("Admin", "Finance"), updateClient);
 router.delete("/:id", protect, authorize("Admin"), deleteClient);
 
 // Everyone can view clients
-router.get("/", protect, authorize("Admin", "HR", "Manager", "Employee"), getClients);
-router.get("/:id", protect, authorize("Admin", "HR", "Manager", "Employee"), getClientById);
+router.get("/", protect, authorize("Admin", "Finance", "Manager", "Employee"), getClients);
+router.get("/:id", protect, authorize("Admin", "Finance", "Manager", "Employee"), getClientById);
 
 export default router;

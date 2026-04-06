@@ -1,55 +1,166 @@
 import WorkCategory from "../models/WorkCategory.js";
 
-/* ================= CREATE ================= */
+/**
+ * ✅ Create a new Work Category
+ * Admin / Finance only
+ */
 export const createWorkCategory = async (req, res) => {
   try {
-    const { name, description, managerId = null } = req.body;
+    const { name, allowedBillingTypes, status } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ message: "Name is required" });
+    if (!name || !allowedBillingTypes?.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Name and Billing Types are Required"
+      });
     }
 
-    const exists = await WorkCategory.findOne({ name });
-    if (exists) {
-      return res.status(409).json({ message: "Work Category already exists" });
+    const existing = await WorkCategory.findOne({ name });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: "Work Category already Exists"
+      });
     }
 
-    const category = await WorkCategory.create({
+    const workCategory = await WorkCategory.create({
       name,
-      description,
-      managerId,
+      allowedBillingTypes,
+      status
     });
 
-    res.status(201).json(category);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(201).json({
+      success: true,
+      data: workCategory
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to Create Work Category",
+      error: error.message
+    });
   }
 };
 
-/* ================= GET ALL ================= */
-export const getWorkCategories = async (req, res) => {
+/**
+ * ✅ Get all Work Categories
+ * Supports Admin / Finance / Read‑only
+ */
+export const getAllWorkCategories = async (req, res) => {
   try {
-    const categories = await WorkCategory.find()
-      .populate("managerId", "name email")
-      .sort({ name: 1 });
+    const { status } = req.query;
 
-    res.json(categories);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const filter = {};
+    if (status) filter.status = status;
+
+    const categories = await WorkCategory.find(filter).sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to Fetch Work Categories",
+      error: error.message
+    });
   }
 };
 
-/* ================= DELETE ================= */
-export const deleteWorkCategory = async (req, res) => {
+/**
+ * ✅ Get single Work Category by ID
+ */
+export const getWorkCategoryById = async (req, res) => {
   try {
-    const category = await WorkCategory.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
 
+    const category = await WorkCategory.findById(id);
     if (!category) {
-      return res.status(404).json({ message: "Work Category NOT Found" });
+      return res.status(404).json({
+        success: false,
+        message: "Work Category NOT Found"
+      });
     }
 
-    res.json({ message: "Work Category Deleted" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(200).json({
+      success: true,
+      data: category
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to Fetch Work Category",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * ✅ Update Work Category
+ * Admin / Finance only
+ */
+export const updateWorkCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const category = await WorkCategory.findById(id);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Work Category NOT Found"
+      });
+    }
+
+    Object.keys(updates).forEach((key) => {
+      category[key] = updates[key];
+    });
+
+    await category.save();
+
+    res.status(200).json({
+      success: true,
+      data: category
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to Update Work Category",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * ✅ Soft Delete (Deactivate) Work Category
+ * Never hard delete
+ */
+export const deactivateWorkCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await WorkCategory.findById(id);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Work Category NOT Found"
+      });
+    }
+
+    category.status = "Inactive";
+    await category.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Work Category Deactivated Successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to Deactivate Work Category",
+      error: error.message
+    });
   }
 };

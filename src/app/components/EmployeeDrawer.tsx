@@ -152,7 +152,7 @@ export default function EmployeeDrawer({
 
           {/* ===== Actions ===== */}
           {(employee.role === "Admin" ||
-            employee.role === "HR") && (
+            employee.role === "Finance") && (
             <Section title="Actions">
               <div className="space-y-2">
                 <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700">

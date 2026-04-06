@@ -67,7 +67,7 @@ export const submitTimesheet = async (req, res) => {
 };
 
 //
-// 2️⃣ APPROVE TIMESHEET (Admin / HR)
+// 2️⃣ APPROVE TIMESHEET (Admin / Finance)
 //
 export const approveTimesheet = async (req, res) => {
   const ts = await Timesheet.findById(req.params.id);
@@ -81,7 +81,7 @@ export const approveTimesheet = async (req, res) => {
 };
 
 //
-// 3️⃣ REJECT TIMESHEET (Admin / HR)
+// 3️⃣ REJECT TIMESHEET (Admin / Finance)
 //
 export const rejectTimesheet = async (req, res) => {
   try {

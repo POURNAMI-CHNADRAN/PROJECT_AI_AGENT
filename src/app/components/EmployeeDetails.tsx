@@ -119,7 +119,7 @@ export default function EmployeeDetails({
         </div>
 
         {/* ================= ACTIONS ================= */}
-        {(employee.role === "Admin" || employee.role === "HR") && (
+        {(employee.role === "Admin" || employee.role === "Finance") && (
           <div className="p-6 border-t bg-gray-50 space-y-2">
             <button
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700 transition"

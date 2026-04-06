@@ -26,12 +26,12 @@ router.post("/seed_admin", createEmployee);
 /* =========================================================
    ✅ CREATE
 ========================================================= */
-router.post("/", protect, authorize("Admin", "HR"), createEmployee);
+router.post("/", protect, authorize("Admin", "Finance"), createEmployee);
 
 /* =========================================================
    ✅ READ
 ========================================================= */
-router.get("/", protect, authorize("Admin", "HR", "Manager"), getEmployees);
+router.get("/", protect, authorize("Admin", "Finance", "Manager"), getEmployees);
 
 // Logged‑in user profile
 router.get("/me", protect, getProfile);
@@ -59,14 +59,14 @@ router.get("/me/utilization", protect, authorize("Employee"), (req, res) => {
 });
 
 /* =========================================================
-   ✅ ADMIN / HR / MANAGER
+   ✅ ADMIN / Finance / MANAGER
 ========================================================= */
 
 // Get allocations of a specific employee
 router.get(
   "/:id/allocations",
   protect,
-  authorize("Admin", "HR", "Manager"),
+  authorize("Admin", "Finance", "Manager"),
   (req, res) => {
     req.query.employee = req.params.id;
     return getMyAllocations(req, res);
@@ -77,7 +77,7 @@ router.get(
 router.get(
   "/:id/utilization",
   protect,
-  authorize("Admin", "HR", "Manager"),
+  authorize("Admin", "Finance", "Manager"),
   (req, res) => {
     req.query.employee = req.params.id;
     return getUtilizationSummary(req, res);
@@ -87,7 +87,7 @@ router.get(
 /* =========================================================
    ✅ EMPLOYEE CRUD
 ========================================================= */
-router.patch("/:id", protect, authorize("Admin", "HR"), update);
+router.patch("/:id", protect, authorize("Admin", "Finance"), update);
 
 router.delete("/:id", protect, authorize("Admin"), remove);
 
@@ -95,7 +95,7 @@ router.delete("/:id", protect, authorize("Admin"), remove);
 router.get(
   "/:id",
   protect,
-  authorize("Admin", "HR", "Manager", "Employee"),
+  authorize("Admin", "Finance", "Manager", "Employee"),
   getOne
 );
 

@@ -12,10 +12,10 @@ import { protect, adminOrHROnly, employeeOnly, allowRoles } from "../middleware/
 
 const router = express.Router();
 
-// Admin + HR
+// Admin + Finance
 router.post("/", protect, adminOrHROnly, create);
 
-router.get("/", protect, allowRoles("Admin", "HR", "Employee"), getAll);
+router.get("/", protect, allowRoles("Admin", "Finance", "Employee"), getAll);
 
 // Employee — assigned stories only
 router.get("/assigned", protect, employeeOnly, getAssignedStories);
@@ -23,10 +23,10 @@ router.get("/assigned", protect, employeeOnly, getAssignedStories);
 // ANY role can view one story (controller restricts employees)
 router.get("/:id", protect, getOne);
 
-// Admin + HR + Employee (controller enforces rules)
+// Admin + Finance + Employee (controller enforces rules)
 router.put("/:id", protect, update);
 
-// Admin OR HR limited delete
+// Admin OR Finance limited delete
 router.delete("/:id", protect, remove);
 
 export default router;

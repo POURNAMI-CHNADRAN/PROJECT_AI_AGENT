@@ -119,7 +119,7 @@ export const createAllocation = async (req, res) => {
    ✅ UPDATE ALLOCATION (FTE ONLY)
 ========================================================= */
 export const updateAllocation = async (req, res) => {
-  if (!["Admin", "HR"].includes(req.user.role)) {
+  if (!["Admin", "Finance"].includes(req.user.role)) {
     return res.status(403).json({ message: "Not Authorized" });
   }
 
@@ -170,7 +170,7 @@ export const updateAllocation = async (req, res) => {
    ✅ MOVE ALLOCATION (PROJECT ONLY)
 ========================================================= */
 export const moveAllocation = async (req, res) => {
-  if (!["Admin", "HR"].includes(req.user.role)) {
+  if (!["Admin", "Finance"].includes(req.user.role)) {
     return res.status(403).json({ message: "Not Authorized" });
   }
 
@@ -208,7 +208,7 @@ export const moveAllocation = async (req, res) => {
    ✅ DELETE ALLOCATION
 ========================================================= */
 export const deleteAllocation = async (req, res) => {
-  if (!["Admin", "HR"].includes(req.user.role)) {
+  if (!["Admin", "Finance"].includes(req.user.role)) {
     return res.status(403).json({ message: "Not Authorized" });
   }
 

@@ -1,20 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Sparkles, Search } from "lucide-react";
-import { SkillMapping } from "../components/SkillMapping";
 
-/* ================= API ================= */
+/* ================= TYPES ================= */
 
-export async function syncSkills(employeeId: string, token: string) {
-  const res = await fetch(
-    `${import.meta.env.VITE_API_BASE_URL}/api/employees/${employeeId}/sync-skills`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-
-  if (!res.ok) throw new Error("Skill Sync Failed");
-  return res.json();
+interface Skill {
+  _id: string;
+  name: string;
+  category: string;
+  status?: "Active" | "Inactive";
 }
 
 /* ================= COMPONENT ================= */
@@ -24,17 +17,16 @@ export default function Skills() {
     import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
   const token = localStorage.getItem("token");
-  const userRole = JSON.parse(localStorage.getItem("user") || "{}")?.role;
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const canManage = ["Admin", "Finance"].includes(user?.role);
 
-  const canManage = ["Admin", "HR"].includes(userRole);
-
-  const [skills, setSkills] = useState<any[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
-
   const [showAdd, setShowAdd] = useState(false);
+
   const [newSkill, setNewSkill] = useState({
     name: "",
     category: "General",
@@ -56,10 +48,10 @@ export default function Skills() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error("Failed to load");
+      if (!res.ok) throw new Error("Failed to load skills");
 
       const data = await res.json();
-      setSkills(Array.isArray(data) ? data : data.data || []);
+      setSkills(Array.isArray(data) ? data : data.data ?? []);
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -89,12 +81,12 @@ export default function Skills() {
     const cleanName = newSkill.name.trim();
 
     if (!cleanName) {
-      alert("Skill Name Required");
+      alert("Skill Name is required");
       return;
     }
 
     if (cleanName.length > 30) {
-      alert("Max 30 Characters Allowed");
+      alert("Maximum 30 characters allowed");
       return;
     }
 
@@ -103,7 +95,7 @@ export default function Skills() {
     );
 
     if (exists) {
-      alert("Skill Already Exists");
+      alert("Skill already exists");
       return;
     }
 
@@ -124,14 +116,14 @@ export default function Skills() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || "Failed");
+        throw new Error(data.message || "Failed to add skill");
       }
 
       setShowAdd(false);
       setNewSkill({ name: "", category: "General" });
       loadSkills();
     } catch (err: any) {
-      alert(err.message || "Error Adding Skill");
+      alert(err.message || "Error adding skill");
     } finally {
       setSaving(false);
     }
@@ -140,7 +132,7 @@ export default function Skills() {
   /* ================= DELETE ================= */
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this Skill?")) return;
+    if (!window.confirm("Delete this skill?")) return;
 
     try {
       const res = await fetch(`${API_BASE}/api/skills/${id}`, {
@@ -150,13 +142,12 @@ export default function Skills() {
 
       if (!res.ok) {
         const data = await res.json();
-        alert(data.message || "Delete Failed");
-        return;
+        throw new Error(data.message || "Delete failed");
       }
 
       loadSkills();
-    } catch {
-      alert("Delete Failed");
+    } catch (err: any) {
+      alert(err.message || "Delete failed");
     }
   };
 
@@ -184,7 +175,7 @@ export default function Skills() {
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg"
           >
-            <Plus size={16} /> Add
+            <Plus size={16} /> Add Skill
           </button>
         )}
       </div>
@@ -193,7 +184,7 @@ export default function Skills() {
       <div className="flex items-center gap-2 bg-white p-3 rounded-lg shadow border">
         <Search size={16} />
         <input
-          placeholder="Search Skills..."
+          placeholder="Search skills..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full outline-none text-sm"
@@ -236,26 +227,24 @@ export default function Skills() {
             ) : (
               filteredSkills.map((skill) => (
                 <tr key={skill._id} className="border-t hover:bg-sky-50">
-                  <td className="px-4 py-3 font-medium">{skill.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {skill.name}
+                  </td>
 
                   <td className="px-4 py-3">
-                    <span className="px-2 py-1 text-xs rounded-full bg-sky-100 text-sky-700">
+                    <span className="px-3 py-1 text-xs rounded-full bg-sky-100 text-sky-700">
                       {skill.category}
                     </span>
                   </td>
 
                   <td className="px-4 py-3 text-center">
-                    {canManage ? (
+                    {canManage && (
                       <button
                         onClick={() => handleDelete(skill._id)}
-                        className="hover:scale-110"
+                        className="hover:scale-110 transition"
                       >
                         <Trash2 size={16} className="text-red-600" />
                       </button>
-                    ) : (
-                      <span className="text-xs text-gray-400">
-                        No Access
-                      </span>
                     )}
                   </td>
                 </tr>
@@ -265,17 +254,9 @@ export default function Skills() {
         </table>
       </div>
 
-      {/* MAPPING
-      <div className="bg-white p-4 rounded-xl shadow border">
-        <h2 className="font-semibold text-sky-800 mb-2">
-          External Skill Mapping 🔗
-        </h2>
-        <SkillMapping skills={skills} />
-      </div> */}
-
-      {/* ADD MODAL */}
+      {/* ADD SKILL MODAL */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black/30 flex justify-center items-center">
+        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-xl w-[400px] space-y-4">
 
             <h2 className="text-lg font-bold">Add Skill</h2>
@@ -286,7 +267,7 @@ export default function Skills() {
               onChange={(e) =>
                 setNewSkill({ ...newSkill, name: e.target.value })
               }
-              className="border p-2 w-full rounded"
+              className="border border-sky-300 px-3 py-2 rounded w-full"
             />
 
             <select
@@ -297,7 +278,7 @@ export default function Skills() {
                   category: e.target.value,
                 })
               }
-              className="border p-2 w-full rounded text-center"
+              className="border border-sky-300 px-3 py-2 rounded w-full"
             >
               <option>General</option>
               <option>Frontend</option>
@@ -308,22 +289,27 @@ export default function Skills() {
               <option>Tools</option>
             </select>
 
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setShowAdd(false)}>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowAdd(false)}
+                className="border px-4 py-2 rounded"
+              >
                 Cancel
               </button>
 
               <button
                 disabled={saving}
                 onClick={handleAdd}
-                className="bg-sky-600 text-white px-4 py-2 rounded"
+                className="bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700"
               >
                 {saving ? "Saving..." : "Save"}
               </button>
             </div>
+
           </div>
         </div>
       )}
+
     </div>
   );
 }

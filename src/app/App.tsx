@@ -34,7 +34,7 @@
 //       <Route
 //         path="/dashboard"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance", "Employee"]}>
 //             <Layout>
 //               <Dashboard />
 //             </Layout>
@@ -46,7 +46,7 @@
 //       <Route
 //         path="/resources"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <Resources />
 //             </Layout>
@@ -57,7 +57,7 @@
 //       <Route
 //         path="/resources/:id"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <ResourceDetails />
 //             </Layout>
@@ -69,7 +69,7 @@
 //       <Route
 //         path="/my-profile"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance", "Employee"]}>
 //             <Layout>
 //               <MyProfile />
 //             </Layout>
@@ -81,7 +81,7 @@
 //       <Route
 //         path="/departments"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <Departments />
 //             </Layout>
@@ -92,7 +92,7 @@
 //       <Route
 //         path="/skills"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <Skills />
 //             </Layout>
@@ -103,7 +103,7 @@
 //       <Route
 //         path="/clients"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <Clients />
 //             </Layout>
@@ -114,7 +114,7 @@
 //       <Route
 //         path="/projects"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <Projects />
 //             </Layout>
@@ -126,7 +126,7 @@
 //       <Route
 //         path="/resource-allocation"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <ResourceAllocation />
 //             </Layout>
@@ -137,7 +137,7 @@
 //       <Route
 //         path="/timesheets"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance", "Employee"]}>
 //             <Layout>
 //               <Timesheets />
 //             </Layout>
@@ -148,7 +148,7 @@
 //       <Route
 //         path="/billing"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <Billing />
 //             </Layout>
@@ -159,7 +159,7 @@
 //       <Route
 //         path="/reports"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <Reports />
 //             </Layout>
@@ -170,7 +170,7 @@
 //       <Route
 //         path="/ai-insights"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <AIInsights />
 //             </Layout>
@@ -193,7 +193,7 @@
 //       <Route
 //         path="/employees/:id"
 //         element={
-//           <RoleRoute allowedRoles={["Admin", "HR"]}>
+//           <RoleRoute allowedRoles={["Admin", "Finance"]}>
 //             <Layout>
 //               <EmployeeProfile />
 //             </Layout>
@@ -249,7 +249,7 @@ export default function App() {
       {/* ✅ PROTECTED ROUTES */}
       <Route
         element={
-          <RoleRoute allowedRoles={["Admin", "HR", "Employee"]}>
+          <RoleRoute allowedRoles={["Admin", "Finance", "Employee"]}>
             <Layout />
           </RoleRoute>
         }

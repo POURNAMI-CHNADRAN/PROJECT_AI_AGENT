@@ -46,7 +46,7 @@ export default function Stories() {
 
   const role = user.role;
   const isAdmin = role === "Admin";
-  const isHR = role === "HR";
+  const isHR = role === "Finance";
   const isEmployee = role === "Employee";
   const isAdminOrHR = isAdmin || isHR;
 
@@ -347,7 +347,7 @@ export default function Stories() {
                     {/* ACTIONS */}
                     <td className="py-2 px-3 text-center">
 
-                      {/* ADMIN/HR */}
+                      {/* ADMIN/Finance */}
                       {isAdminOrHR && (
                         <div className="flex justify-center gap-3">
                           <button
@@ -600,7 +600,7 @@ function ModalFields({
   return (
     <div className="space-y-3">
 
-      {(role === "Admin" || role === "HR") && (
+      {(role === "Admin" || role === "Finance") && (
         <>
           <div>
             <label className="text-sm font-medium">Title</label>

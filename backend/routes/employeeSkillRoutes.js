@@ -27,25 +27,25 @@ router.get("/me", protect, async (req, res) => {
 router.get(
   "/:employeeId",
   protect,
-  authorize("Admin", "HR", "Manager", "Employee"),
+  authorize("Admin", "Finance", "Manager", "Employee"),
   getEmployeeSkills
 );
 
 
-// Assign skills → Admin + HR only
+// Assign skills → Admin + Finance only
 router.post(
   "/:employeeId",
   protect,
-  authorize("Admin", "HR"),
+  authorize("Admin", "Finance"),
   addEmployeeSkill
 );
 
 
-// Remove skills → Admin + HR only
+// Remove skills → Admin + Finance only
 router.delete(
   "/mapping/:mappingId",
   protect,
-  authorize("Admin", "HR"),
+  authorize("Admin", "Finance"),
   removeEmployeeSkill
 );
 

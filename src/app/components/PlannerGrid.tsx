@@ -165,7 +165,7 @@ export function ResourcePlanningGrid({
   onSelectEmployee?: (emp: any) => void;
 }) {
   const role = localStorage.getItem("role");
-  const canEditFTE = role === "Admin" || role === "HR";
+  const canEditFTE = role === "Admin" || role === "Finance";
 
   return (
     <div className="bg-white rounded-2xl shadow-md border border-black-200">

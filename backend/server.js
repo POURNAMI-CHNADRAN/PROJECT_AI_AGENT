@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 
+import userRoutes from "./routes/userRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import allocationRoutes from "./routes/allocationRoutes.js";
@@ -19,6 +20,7 @@ import chatRoutes from "./routes/chat.js";
 import payrollRoutes from "./routes/payrollRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import workcategoryRoutes from "./routes/workcategoryRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -29,6 +31,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/allocations", allocationRoutes);
@@ -44,6 +47,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/workcategories", workcategoryRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Also serve uploads directory statically
 app.use("/uploads", express.static("uploads"));

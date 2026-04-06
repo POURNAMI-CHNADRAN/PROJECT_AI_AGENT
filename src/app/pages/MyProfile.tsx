@@ -729,7 +729,7 @@
 // //             <div className="space-y-3 text-sm">
 // //               <p>Role: <strong>{profile.role}</strong></p>
 // //               <p>Employee ID: <strong>{profile.employeeId}</strong></p>
-// //               <p>Rate/hr: ₹{profile.ratePerHour}</p>
+// //               <p>Rate/Finance: ₹{profile.ratePerHour}</p>
 // //             </div>
 // //           </div>
 // //         </div>
@@ -1002,7 +1002,7 @@ const loadEmployeeAllocations = async () => {
             </h3>
             <p>Role: <strong>{profile.role}</strong></p>
             <p>ID: <strong>{profile.employeeId}</strong></p>
-            <p>Rate / hr: ₹{profile.ratePerHour}</p>
+            <p>Rate / Finance: ₹{profile.ratePerHour}</p>
           </div>
         </div>
       )}

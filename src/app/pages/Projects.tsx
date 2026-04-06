@@ -259,7 +259,7 @@ return (
           </div>
         </div>
 
-        {(userRole === "Admin" || userRole === "HR") && (
+        {(userRole === "Admin" || userRole === "Finance") && (
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2 rounded-lg shadow hover:bg-sky-700 hover:scale-105 transition"
@@ -370,7 +370,7 @@ return (
                   <td className="py-2 px-2 text-center">{getEmployeeName(p.assignedTo)}</td>
 
                   <td className="py-2 px-2 text-center">
-                    {(userRole === "Admin" || userRole === "HR") && (
+                    {(userRole === "Admin" || userRole === "Finance") && (
                       <div className="flex justify-center gap-3">
                         <button
                           onClick={() => {
@@ -479,7 +479,7 @@ return (
             />
 
             {/* ASSIGN TO */}
-            {(userRole === "Admin" || userRole === "HR") && (
+            {(userRole === "Admin" || userRole === "Finance") && (
               <select
                 value={newProject.assignedTo}
                 className="border border-sky-300 p-2 w-full rounded"

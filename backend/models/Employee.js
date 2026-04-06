@@ -1,9 +1,8 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
 
 const employeeSchema = new mongoose.Schema(
   {
-    employeeId: {
+    employeeCode: {
       type: String,
       required: true,
       unique: true,
@@ -16,7 +15,7 @@ const employeeSchema = new mongoose.Schema(
       trim: true,
       minlength: 2,
       maxlength: 50,
-      match: [/^[A-Za-z\s]+$/, "Invalid name"],
+      match: [/^[A-Za-z\s]+$/, "Invalid Name"],
     },
 
     email: {
@@ -25,19 +24,7 @@ const employeeSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, "Invalid email"],
-    },
-
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-    },
-
-    role: {
-      type: String,
-      enum: ["Admin", "Manager", "Employee", "HR"],
-      default: "Employee",
+      match: [/^\S+@\S+\.\S+$/, "Invalid Email"],
     },
 
     departmentId: {
@@ -60,7 +47,7 @@ const employeeSchema = new mongoose.Schema(
     ],
 
     experience: {
-      type: Number, // years
+      type: Number,
       default: 0,
     },
 
@@ -94,18 +81,5 @@ const employeeSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// 🔐 Password hashing
-employeeSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
-  this.password = await bcrypt.hash(this.password, 10);
-});
-
-// 🚫 Hide password
-employeeSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-  delete obj.password;
-  return obj;
-};
 
 export default mongoose.model("Employee", employeeSchema);

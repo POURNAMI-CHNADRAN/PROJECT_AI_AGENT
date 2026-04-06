@@ -91,7 +91,7 @@ const runTests = async () => {
     // 8. UPDATE EMPLOYEE
     // =========================
     await axios.put(`${BASE_URL}/employees/${employeeId}`, {
-      department: "HR"
+      department: "Finance"
     });
 
     console.log("✏️ Employee Updated");

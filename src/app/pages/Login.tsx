@@ -51,7 +51,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     }
 
   } catch (err: any) {
-    setError(err.message || "Login failed");
+    setError(err.message || "Login Failed");
   } finally {
     setLoading(false);
   }

@@ -112,7 +112,7 @@ export default function ResourceAllocation() {
   const role = user.role;
 
   const isAdmin = role === "Admin";
-  const isHR = role === "HR";
+  const isHR = role === "Finance";
   const isEmployee = role === "Employee";
 
   /* ------------------ STATE ------------------ */

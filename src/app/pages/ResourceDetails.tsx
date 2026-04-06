@@ -79,7 +79,7 @@ export default function ResourceDetails() {
         </div>
 
         <div>
-          <b>Rate/hr:</b> ₹{emp.ratePerHour ?? "N/A"}
+          <b>Rate/Finance:</b> ₹{emp.ratePerHour ?? "N/A"}
         </div>
 
         <div>

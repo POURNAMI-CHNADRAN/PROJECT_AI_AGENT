@@ -246,7 +246,7 @@ export default function Clients() {
                 </div>
               </div>
 
-        {(userRole === "Admin" || userRole === "HR") && (
+        {(userRole === "Admin" || userRole === "Finance") && (
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 bg-sky-700 text-white px-5 py-2.5 rounded-xl shadow hover:bg-sky-800 hover:scale-105 transition"
@@ -470,7 +470,7 @@ function ClientCard({
       <Detail icon={<Phone size={18} className="text-sky-600" />} label="Phone" value={client.phone} />
       <Detail icon={<MapPin size={18} className="text-sky-600" />} label="Address" value={client.address} />
 
-      {(userRole === "Admin" || userRole === "HR") && (
+      {(userRole === "Admin" || userRole === "Finance") && (
         <div className="flex justify-end gap-4 mt-6">
           <button
             onClick={() => {

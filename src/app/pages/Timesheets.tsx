@@ -476,7 +476,7 @@ const rejectTimesheet = async (id: string) => {
               <th className="py-3">Points</th>
               <th className="py-3">Date</th>
               <th className="py-3">Status</th>
-              {(role === "HR" || role === "Admin") && (
+              {(role === "Finance" || role === "Admin") && (
                 <th className="py-3">Actions</th>
               )}
             </tr>
@@ -506,7 +506,7 @@ const rejectTimesheet = async (id: string) => {
                   </span>
                 </td>
 
-                {(role === "HR" || role === "Admin") && (
+                {(role === "Finance" || role === "Admin") && (
                   <td className="py-3 flex justify-center gap-4">
                     <button
                       onClick={() => approveTimesheet(t._id)}
@@ -530,7 +530,7 @@ const rejectTimesheet = async (id: string) => {
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={role === "HR" || role === "Admin" ? 7 : 6}
+                  colSpan={role === "Finance" || role === "Admin" ? 7 : 6}
                   className="text-center py-10 text-sky-700"
                 >
                   No Timesheets Found

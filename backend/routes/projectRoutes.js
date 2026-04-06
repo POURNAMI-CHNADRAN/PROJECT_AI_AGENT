@@ -11,13 +11,13 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 /* ---------------- READ ---------------- */
-router.get("/", protect, authorize("Admin", "HR", "Manager"), getProjects);
+router.get("/", protect, authorize("Admin", "Finance", "Manager"), getProjects);
 
 /* ---------------- CREATE ---------------- */
-router.post("/", protect, authorize("Admin", "HR"), createProject);
+router.post("/", protect, authorize("Admin", "Finance"), createProject);
 
 /* ---------------- UPDATE ---------------- */
-router.patch("/:id", protect, authorize("Admin", "HR"), updateProject);
+router.patch("/:id", protect, authorize("Admin", "Finance"), updateProject);
 
 /* ---------------- DELETE ---------------- */
 router.delete("/:id", protect, authorize("Admin"), deleteProject);
