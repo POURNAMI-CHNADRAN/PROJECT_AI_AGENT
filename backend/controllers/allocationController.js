@@ -1,285 +1,125 @@
-import mongoose from "mongoose";
 import Allocation from "../models/Allocation.js";
+import Employee from "../models/Employee.js";
 
 const MONTHLY_CAPACITY = 160;
 
-/* =========================================================
-   ✅ UTILIZATION ENGINE (SINGLE SOURCE OF TRUTH)
-========================================================= */
-const getUtilization = (totalFTE) => {
-  if (totalFTE < MONTHLY_CAPACITY) {
-    return {
-      status: "Underutilized",
-      remainingHours: MONTHLY_CAPACITY - totalFTE,
-      overHours: 0,
-    };
-  }
-
-  if (totalFTE === MONTHLY_CAPACITY) {
-    return {
-      status: "Optimal",
-      remainingHours: 0,
-      overHours: 0,
-    };
-  }
-
-  return {
-    status: "Overutilized",
-    remainingHours: 0,
-    overHours: totalFTE - MONTHLY_CAPACITY,
-  };
-};
-
-/* =========================================================
-   ✅ CREATE ALLOCATION (TRANSACTION SAFE)
-========================================================= */
 export const createAllocation = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const {
-      employee,
-      project,
-      fte,
+      employeeId,
+      projectId,
+      workCategoryId,
       month,
       year,
-      isBillable = false,
+      allocatedHours,
+      isBillable,
     } = req.body;
 
-    if (!employee || !project || !fte || !month || !year) {
-      throw new Error("employee, project, fte, month, year are required");
+    // ✅ Fetch employee
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee NOT Found" });
     }
 
-    if (fte < 1 || fte > MONTHLY_CAPACITY) {
-      throw new Error("FTE must be between 1 and 160");
-    }
+    // ✅ Calculate existing allocation for month
+    const existing = await Allocation.find({
+      employeeId,
+      month,
+      year,
+    });
 
-    if (month < 1 || month > 12) {
-      throw new Error("Invalid month");
-    }
-
-    if (year < 2020 || year > 2100) {
-      throw new Error("Invalid year");
-    }
-
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
-
-    const existing = await Allocation.find({ employee, month, year }).session(
-      session
+    const totalAllocated = existing.reduce(
+      (s, a) => s + a.allocatedHours,
+      0
     );
 
-    const used = existing.reduce((s, a) => s + a.fte, 0);
-    const totalFTE = used + fte;
-
-    if (totalFTE > MONTHLY_CAPACITY) {
-      throw new Error("Monthly capacity exceeded");
+    if (totalAllocated + allocatedHours > MONTHLY_CAPACITY) {
+      return res.status(400).json({
+        message: "Allocation Exceeds Monthly Capacity (160h)",
+      });
     }
 
-    const duplicate = await Allocation.findOne({
-      employee,
-      project,
+    const allocation = await Allocation.create({
+      employeeId,
+      projectId,
+      workCategoryId,
       month,
       year,
-    }).session(session);
-
-    if (duplicate) {
-      throw new Error("Allocation already exists for this project/month");
-    }
-
-    const allocation = new Allocation({
-      employee,
-      project,
-      fte,
-      month,
-      year,
+      allocatedHours,
       isBillable,
-      startDate,
-      endDate,
+      rateSnapshot: employee.hourlyCost,
     });
 
-    await allocation.save({ session });
-    await session.commitTransaction();
-
-    res.status(201).json({
-      allocation,
-      totalFTE,
-      ...getUtilization(totalFTE),
-    });
+    res.status(201).json({ success: true, data: allocation });
   } catch (err) {
-    await session.abortTransaction();
-    res.status(400).json({ message: err.message });
-  } finally {
-    session.endSession();
+    res.status(500).json({ message: err.message });
   }
 };
 
-/* =========================================================
-   ✅ UPDATE ALLOCATION (FTE ONLY)
-========================================================= */
+// -----------------------------------------------------------------------------------
 export const updateAllocation = async (req, res) => {
-  if (!["Admin", "Finance"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Not Authorized" });
+  const { allocatedHours, isBillable } = req.body;
+  const allocationId = req.params.id;
+
+  const allocation = await Allocation.findById(allocationId);
+  if (!allocation) {
+    return res.status(404).json({ message: "Allocation NOT Found" });
   }
 
-  try {
-    const allocation = await Allocation.findById(req.params.id);
-    if (!allocation) {
-      return res.status(404).json({ message: "Allocation not found" });
-    }
+  // ✅ Capacity validation
+  const others = await Allocation.find({
+    employeeId: allocation.employeeId,
+    month: allocation.month,
+    year: allocation.year,
+    _id: { $ne: allocationId },
+  });
 
-    const { fte } = req.body;
+  const otherHours = others.reduce(
+    (s, a) => s + a.allocatedHours,
+    0
+  );
 
-    if (fte < 1 || fte > MONTHLY_CAPACITY) {
-      return res.status(400).json({
-        message: "FTE must be between 1 and 160",
-      });
-    }
-
-    const others = await Allocation.find({
-      employee: allocation.employee,
-      month: allocation.month,
-      year: allocation.year,
-      _id: { $ne: allocation._id },
+  if (otherHours + allocatedHours > 160) {
+    return res.status(400).json({
+      message: "Allocation Exceeds Monthly Capacity (160h)",
     });
-
-    const totalFTE =
-      others.reduce((s, a) => s + a.fte, 0) + Number(fte);
-
-    if (totalFTE > MONTHLY_CAPACITY) {
-      return res.status(400).json({
-        message: "Monthly capacity exceeded",
-      });
-    }
-
-    allocation.fte = fte;
-    await allocation.save();
-
-    res.json({
-      allocation,
-      totalFTE,
-      ...getUtilization(totalFTE),
-    });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
   }
+
+  allocation.allocatedHours = allocatedHours;
+  allocation.isBillable = isBillable;
+  await allocation.save();
+
+  res.json({ success: true, data: allocation });
 };
 
-/* =========================================================
-   ✅ MOVE ALLOCATION (PROJECT ONLY)
-========================================================= */
+// -----------------------------------------------------------------------
 export const moveAllocation = async (req, res) => {
-  if (!["Admin", "Finance"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Not Authorized" });
+  const { newProjectId } = req.body;
+  const allocationId = req.params.id;
+
+  const allocation = await Allocation.findById(allocationId);
+  if (!allocation) {
+    return res.status(404).json({ message: "Allocation NOT Found" });
   }
 
-  try {
-    const { allocationId, newProjectId } = req.body;
+  const exists = await Allocation.findOne({
+    employeeId: allocation.employeeId,
+    projectId: newProjectId,
+    month: allocation.month,
+    year: allocation.year,
+    _id: { $ne: allocationId },
+  });
 
-    const allocation = await Allocation.findById(allocationId);
-    if (!allocation) {
-      return res.status(404).json({ message: "Allocation not found" });
-    }
-
-    const exists = await Allocation.findOne({
-      employee: allocation.employee,
-      project: newProjectId,
-      month: allocation.month,
-      year: allocation.year,
+  if (exists) {
+    return res.status(400).json({
+      message: "Employee already Allocated to this Project",
     });
-
-    if (exists) {
-      return res
-        .status(409)
-        .json({ message: "Allocation already exists for this project/month" });
-    }
-
-    allocation.project = newProjectId;
-    await allocation.save();
-
-    res.json({ allocation });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-};
-
-/* =========================================================
-   ✅ DELETE ALLOCATION
-========================================================= */
-export const deleteAllocation = async (req, res) => {
-  if (!["Admin", "Finance"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Not Authorized" });
   }
 
-  await Allocation.findByIdAndDelete(req.params.id);
-  res.json({ message: "Allocation deleted" });
+  allocation.projectId = newProjectId;
+  await allocation.save();
+
+  res.json({ success: true });
 };
 
-/* =========================================================
-   ✅ GET ALLOCATIONS FOR EMPLOYEE
-========================================================= */
-export const getMyAllocations = async (req, res) => {
-  const employee =
-    req.query.employee ||
-    req.query.employeeId ||
-    req.user?._id ||
-    req.user?.id;
-
-  if (!employee) {
-    return res.status(400).json({ message: "employee is required" });
-  }
-
-  const allocations = await Allocation.find({ employee })
-    .populate("project", "name")
-    .sort({ year: -1, month: -1 });
-
-  res.json(allocations);
-};
-
-/* =========================================================
-   ✅ UTILIZATION SUMMARY
-========================================================= */
-export const getUtilizationSummary = async (req, res) => {
-  const { employee, month, year } = req.query;
-
-  if (!employee || !month || !year) {
-    return res
-      .status(400)
-      .json({ message: "employee, month, year are required" });
-  }
-
-  const allocations = await Allocation.find({
-    employee,
-    month: Number(month),
-    year: Number(year),
-  });
-
-  const totalFTE = allocations.reduce((s, a) => s + a.fte, 0);
-
-  res.json({
-    employee,
-    month,
-    year,
-    totalFTE,
-    ...getUtilization(totalFTE),
-  });
-};
-
-/* =========================================================
-   ✅ GET YEARLY ALLOCATIONS (HEATMAP)
-========================================================= */
-export const getYearlyAllocations = async (req, res) => {
-  const { year } = req.query;
-
-  if (!year) {
-    return res.status(400).json({ message: "year is required" });
-  }
-
-  const allocations = await Allocation.find({ year: Number(year) })
-    .populate("employee", "name departmentId ratePerHour")
-    .populate("project", "name")
-    .sort({ month: 1 });
-
-  res.json(allocations);
-};
+// --------------------------------------------------------------------

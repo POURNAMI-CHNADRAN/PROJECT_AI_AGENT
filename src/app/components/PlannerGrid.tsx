@@ -152,9 +152,9 @@ import { Pencil } from "lucide-react";
 const MONTHLY_CAPACITY = 160;
 const DEFAULT_MARGIN = 1.6;
 
-function calculateRatePerHour(monthlySalary: number, fte: number) {
-  if (!monthlySalary || !fte) return 0;
-  return Math.round((monthlySalary / MONTHLY_CAPACITY) * DEFAULT_MARGIN);
+function calculateRatePerHour(hourlyCost: number) {
+  if (!hourlyCost) return 0;
+  return Math.round(hourlyCost * DEFAULT_MARGIN);
 }
 
 export function ResourcePlanningGrid({
@@ -164,106 +164,80 @@ export function ResourcePlanningGrid({
   employees: any[];
   onSelectEmployee?: (emp: any) => void;
 }) {
-  const role = localStorage.getItem("role");
+  // ✅ Correct role source
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user?.role;
   const canEditFTE = role === "Admin" || role === "Finance";
 
   return (
-    <div className="bg-white rounded-2xl shadow-md border border-black-200">
+    <div className="bg-white rounded-2xl shadow-md border border-gray-200">
       <table className="w-full text-sm">
         {/* ================= HEADER ================= */}
-        <thead className="bg-blue-50 border-b">
-          <tr className="text-xs uppercase text-500">
-            <th className="px-4 py-3 font-extrabold text-center">Emp ID</th>
-            <th className="px-4 py-3 font-extrabold text-center">Name</th>
-            <th className="px-4 py-3 font-extrabold text-center">Category</th>
-            <th className="px-4 py-3 font-extrabold text-center">Skills</th>
-            <th className="px-4 py-3 font-extrabold text-center">Projects</th>
-            <th className="px-4 py-3 font-extrabold text-center">FTE</th>
-            <th className="px-4 py-3 font-extrabold text-center">Rate</th>
+        <thead className="bg-green-50 border-b">
+          <tr className="text-extrabold uppercase text-brown-600">
+            <th className="px-4 py-3 font-bold text-center">EMP ID</th>
+            <th className="px-4 py-3 font-bold text-center">Name</th>
+            <th className="px-4 py-3 font-bold text-center">Category</th>
+            <th className="px-4 py-3 font-bold text-center">Skills</th>
+            <th className="px-4 py-3 font-bold text-center">Projects</th>
+            <th className="px-4 py-3 font-bold text-center">FTE</th>
+            <th className="px-4 py-3 font-bold text-center">Rate</th>
           </tr>
         </thead>
 
         {/* ================= BODY ================= */}
         <tbody className="divide-y">
-          {employees.map((e) => (
+          {employees.map((emp) => (
             <tr
-              key={e._id}
-              onClick={() => onSelectEmployee?.(e)}
-              className="hover:bg-sky-50 cursor-pointer align-top"
+              key={emp._id}
+              className="hover:bg-sky-50 cursor-pointer"
+              onClick={() => onSelectEmployee?.(emp)}
             >
-              {/* EMP ID */}
-              <td className="px-4 py-3 font-medium text-gray-700 text-center">
-                {e.employeeId}
+              {/* Emp ID */}
+              <td className="px-3 py-2 font-medium text-center">
+                {emp.employeeCode || "—"}
               </td>
 
-              {/* NAME */}
-              <td className="px-4 py-3 text-center">
-                <div className="font-semibold">{e.name}</div>
-                <div className="text-xs text-gray-400">{e.role}</div>
+              {/* Name */}
+              <td className="px-3 py-2 font-medium text-center">
+                {emp.name}
               </td>
 
-              {/* WORK CATEGORY */}
-              <td className="px-4 py-3 text-center">
-                {e.workCategoryId?.name || <span className="italic text-400">—</span>}
+              {/* Category */}
+              <td className="px-3 py-2 text-center">
+                {emp.primaryWorkCategoryId?.name || "—"}
               </td>
 
-              {/* SKILLS */}
-            <td className="px-4 py-3 align-top text-center">
-              <div className="flex flex-wrap justify-center items-center gap-1 min-h-[24px]">
-                  {(e.skills || []).length > 0 ? (
-                    e.skills.map((s: any, i: number) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-700"
-                      >
-                        {typeof s === "string" ? s : s.name}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="italic text-center text-400"> — </span>
-                  )}
-                </div>
+              {/* Skills */}
+              <td className="px-3 py-2 text-center">
+                {(emp.skills || []).length > 0
+                  ? emp.skills.map((s: any) => s.name).join(", ")
+                  : "—"}
               </td>
 
-              {/* PROJECTS */}
-              <td className="px-4 py-3 text-center">
-                <div className="flex flex-col gap-1">
-                  {(e.allocations || []).length > 0 ? (
-                    e.allocations.map((a: any, i: number) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 text-center rounded-md text-xs bg-green-50 text-700"
-                      >
-                        {a.project?.name}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="italic text-400">—</span>
-                  )}
-                </div>
+              {/* Projects */}
+              <td className="px-3 py-2 text-center">
+                {(emp.allocations || []).length > 0
+                  ? emp.allocations
+                      .map((a: any) => a.projectId?.name)
+                      .filter(Boolean)
+                      .join(", ")
+                  : "—"}
               </td>
 
               {/* FTE */}
-              <td className="px-4 py-3 text-center">
-                <div className="flex justify-center items-center gap-2">
-                  <span className="font-semibold tabular-nums">
-                    {e.totalFTE}h
-                  </span>
-                  {canEditFTE && (
-                    <Pencil
-                      size={14}
-                      className="text-gray-400 hover:text-sky-600"
-                    />
-                  )}
-                </div>
+              <td className="px-3 py-2 text-center">
+                {(emp.allocations || []).length > 0
+                  ? emp.allocations.reduce(
+                      (sum: number, a: any) => sum + (a.fte || 0),
+                      0
+                    )
+                  : "—"}
               </td>
 
-              {/* RATE */}
-              <td className="px-4 py-3 text-center font-semibold tabular-nums">
-                ₹{calculateRatePerHour(
-                  e.costPerMonth || e.salary || 0,
-                  e.totalFTE || 0
-                )}
+              {/* Rate */}
+              <td className="px-3 py-2 text-center">
+                ₹{calculateRatePerHour(emp.hourlyCost ?? 0)}
               </td>
             </tr>
           ))}

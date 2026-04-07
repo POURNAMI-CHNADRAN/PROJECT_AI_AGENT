@@ -1,142 +1,185 @@
 import Employee from "../models/Employee.js";
+import { getNextEmployeeCode } from "../utils/Next.js";
 import Allocation from "../models/Allocation.js";
-import { Next } from "../utils/Next.js"; 
-import bcrypt from "bcryptjs";
 
+/* ================= CREATE ================= */
 export const createEmployee = async (req, res) => {
   try {
-    const employeeId = await Next();
+    const {
+      name,
+      email,
+      departmentId,
+      primaryWorkCategoryId,
+      skills,
+      hourlyCost,
+      status,
+      joiningDate,
+      location,
+    } = req.body;
 
-    // ✅ Generate default password if not provided
-    const plainPassword = req.body.password || "123456";
+    const employeeCode = await getNextEmployeeCode();
 
-    // ✅ Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(plainPassword, salt);
-
-    // ✅ Create employee
-    const employee = new Employee({
-      ...req.body,
-      employeeId,
-      password: hashedPassword, 
+    const employee = await Employee.create({
+      employeeCode,
+      name,
+      email,
+      departmentId,
+      primaryWorkCategoryId,
+      skills: skills || [],
+      hourlyCost,
+      status,
+      joiningDate,
+      location,
     });
 
-    await employee.save();
-
-    const employeeResponse = employee.toObject();
-    delete employeeResponse.password;
-
-    res.status(201).json(employeeResponse);
-
-  } catch (error) {
-    console.error("Create Employee Error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(201).json({
+      success: true,
+      data: employee,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ✅ GET ALL EMPLOYEES WITH ALLOCATIONS
+/* ================= READ (ALL) ================= */
 export const getEmployees = async (req, res) => {
   try {
+    const { month, year } = req.query;
+
     const employees = await Employee.find()
-      .populate("departmentId", "name")
-      .populate("skills", "name")
-      .populate({
-        path: "workCategoryId",
-        select: "name",
-        options: { strictPopulate: false }, 
-      });
+      .populate("primaryWorkCategoryId")
+      .populate("skills");
 
-    const allocations = await Allocation.find().populate(
-      "project",
-      "name type"
-    );
+    const employeeIds = employees.map(e => e._id);
 
-    const result = employees.map((emp) => {
-      const empAlloc = allocations.filter(
-        (a) => a.employee?.toString() === emp._id.toString()
-      );
+    // ✅ pull allocations for requested month/year
+    const allocations = await Allocation.find({
+      employeeId: { $in: employeeIds },
+      ...(month && year && {
+        month: Number(month),
+        year: Number(year),
+      }),
+    }).populate("projectId", "name");
 
-      const totalFTE = empAlloc.reduce(
-        (sum, a) => sum + (a.fte || 0),
-        0
-      );
+    // ✅ group allocations by employee
+    const allocationMap = allocations.reduce((acc, a) => {
+      const key = a.employeeId.toString();
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(a);
+      return acc;
+    }, {});
 
-      let status = "Optimal";
-      if (totalFTE < 160) status = "Underbilled";
-      if (totalFTE > 160) status = "Overbilled";
+    // ✅ attach allocations to employees
+    const enrichedEmployees = employees.map(e => ({
+      ...e.toObject(),
+      allocations: allocationMap[e._id.toString()] || [],
+    }));
 
-      return {
-        ...emp.toObject(),
-        workCategoryName: emp.workCategoryId?.name || null, // ✅ flatten for UI
-        allocations: empAlloc,
-        totalFTE,
-        utilizationStatus: status,
-      };
-    });
-
-    res.status(200).json(result);
-  } catch (err) {
-    console.error("GET /api/employees failed:", err);
-    res.status(200).json([]); // ✅ NEVER break frontend
-  }
-};
-
-// ✅ GET SINGLE EMPLOYEE
-export const getOne = async (req, res) => {
-  try {
-    const emp = await Employee.findById(req.params.id)
-      .populate("departmentId", "name");
-
-    if (!emp) {
-      return res.status(404).json({ message: "Employee NOT Found" });
-    }
-
-    res.json(emp);
+    res.json(enrichedEmployees);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ GET LOGGED-IN USER PROFILE
-export const getProfile = async (req, res) => {
+// --------------------------------------------------------------------
+export const getAllEmployees = async (req, res) => {
   try {
-    const emp = await req.user.employeeId.select("-password");
+    const employees = await Employee.find()
+      .populate("primaryWorkCategoryId")
+      .populate("skills");
 
-    if (!emp) {
-      return res.status(404).json({ message: "User NOT Found" });
-    }
+    const employeeIds = employees.map(e => e._id);
 
-    res.json(emp);
+    const allocations = await Allocation.find({
+      employeeId: { $in: employeeIds },
+      month: Number(req.query.month),
+      year: Number(req.query.year),
+    }).populate("projectId", "name");
+
+    const allocationMap = allocations.reduce((map, a) => {
+      const key = a.employeeId.toString();
+      if (!map[key]) map[key] = [];
+      map[key].push(a);
+      return map;
+    }, {});
+
+    const result = employees.map(e => ({
+      ...e.toObject(),
+      allocations: allocationMap[e._id.toString()] || []
+    }));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+/* ================= READ (ONE) ================= */
 
-// ✅ UPDATE EMPLOYEE
-export const update = async (req, res) => {
+export const getEmployeeById = async (req, res) => {
+  const emp = await Employee.findById(req.params._id)
+    .populate("departmentId", "name")
+    .populate("primaryWorkCategoryId", "name")
+    .populate("skills", "name category");
+
+  if (!emp) {
+    return res.status(404).json({ message: "Employee NOT Found" });
+  }
+
+  res.json({ success: true, data: emp });
+};
+
+/* ================= UPDATE ================= */
+
+export const updateEmployee = async (req, res) => {
   try {
-    const emp = await Employee.findByIdAndUpdate(
-      req.params.id,
+    const updated = await Employee.findByIdAndUpdate(
+      req.params._id,
       req.body,
       { new: true }
     );
 
-    res.json(emp);
+    if (!updated) {
+      return res.status(404).json({ message: "Employee NOT Found" });
+    }
+
+    res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ✅ DELETE (SOFT DELETE → INACTIVE)
-export const remove = async (req, res) => {
+/* ================= DELETE ================= */
+export const deleteEmployee = async (req, res) => {
   try {
-    await Employee.findByIdAndUpdate(req.params.id, {
-      status: "Inactive",
+    const employee = await Employee.findByIdAndDelete(req.params._id);
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee NOT Found"
+      });
+    }
+
+    // ✅ Check remaining employees
+    const remaining = await Employee.countDocuments();
+
+    if (remaining === 0) {
+      await Counter.findByIdAndUpdate(
+        { _id: "employee" },
+        { seq: 0 },
+        { upsert: true }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "Employee Deleted Successfully"
     });
 
-    res.json({ message: "Employee Deactivated" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
-

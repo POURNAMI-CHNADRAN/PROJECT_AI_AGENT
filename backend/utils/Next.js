@@ -1,15 +1,11 @@
-import { Counter } from "../models/Counter.js";
+import Counter from "../models/Counter.js";
 
-export const Next = async () => {
-  // Increment the counter atomically
-  const counter = await Counter.findOneAndUpdate(
-    { name: "employee" },
+export const getNextEmployeeCode = async () => {
+  const counter = await Counter.findByIdAndUpdate(
+    { _id: "employee" },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true } // create if doesn't exist
+    { new: true, upsert: true }
   );
 
-  // Pad the number to 3 digits: 001, 002, 003
-  const sequence = String(counter.seq).padStart(3, "0");
-
-  return `EMP-${sequence}`;
+  return `EMP-${String(counter.seq).padStart(4, "0")}`;
 };

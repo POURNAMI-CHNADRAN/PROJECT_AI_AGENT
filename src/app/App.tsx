@@ -254,7 +254,6 @@ export default function App() {
           </RoleRoute>
         }
       >
-        <Route path="dashboard" element={<Dashboard />} />
 
         {/* ✅ RESOURCE HUB */}
         <Route path="resources" element={<ResourcesLayout />}>
@@ -267,6 +266,7 @@ export default function App() {
 
         {/* ✅ MASTER DATA */}
         <Route path="segmentations" element={<Segmentations />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="skills" element={<Skills />} />
         <Route path="clients" element={<Clients />} />
         <Route path="projects" element={<Projects />} />

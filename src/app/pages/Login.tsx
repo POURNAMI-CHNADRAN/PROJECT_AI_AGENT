@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/authContext";
+import axios from "axios";
 
 // API base resolution (Vite / CRA)
 let API_BASE = "http://localhost:5000";
@@ -13,6 +14,20 @@ try {
     API_BASE = process.env.REACT_APP_API_BASE_URL;
   }
 } catch {}
+
+const API = import.meta.env.VITE_API_BASE_URL;
+
+export const handleLogin = async (email: string, password: string) => {
+  const res = await axios.post(`${API}/api/auth/login`, {
+    email,
+    password,
+  });
+
+  localStorage.setItem("token", res.data.token);
+  localStorage.setItem("user", JSON.stringify(res.data.user));
+
+  return res.data.user;
+};
 
 export default function Login() {
   const navigate = useNavigate();

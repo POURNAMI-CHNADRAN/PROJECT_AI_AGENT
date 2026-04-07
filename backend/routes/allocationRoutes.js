@@ -1,43 +1,31 @@
 import express from "express";
-import {
-  createAllocation,
-  updateAllocation,
-  moveAllocation,
-  deleteAllocation,
-  getMyAllocations,
-  getUtilizationSummary,
-  getYearlyAllocations,
-} from "../controllers/allocationController.js";
+import { createAllocation , 
+  updateAllocation, 
+  moveAllocation} from "../controllers/allocationController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/* ✅ CRUD */
-router.post("/", protect, authorize("Admin", "Finance"), createAllocation);
-router.patch("/:id", protect, authorize("Admin", "Finance"), updateAllocation);
-router.post("/move", protect, authorize("Admin", "Finance"), moveAllocation);
-router.delete("/:id", protect, authorize("Admin", "Finance"), deleteAllocation);
-
-/* ✅ Reads */
-router.get(
+router.post(
   "/",
   protect,
-  authorize("Admin", "Finance", "Manager", "Employee"),
-  getMyAllocations
+  authorize("Admin", "Finance"),
+  createAllocation
 );
 
-router.get(
-  "/utilization",
+router.put(
+  "/:id",
   protect,
-  authorize("Admin", "Finance", "Manager", "Employee"),
-  getUtilizationSummary
+  authorize("Admin", "Finance"),
+  updateAllocation
 );
 
-router.get(
-  "/year",
+// PUT /api/allocations/:id/move
+router.put(
+  "/:id",
   protect,
-  authorize("Admin", "Finance", "Manager"),
-  getYearlyAllocations
+  authorize("Admin", "Finance"),
+  moveAllocation
 );
 
 export default router;

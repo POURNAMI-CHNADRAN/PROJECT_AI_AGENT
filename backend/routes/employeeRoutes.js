@@ -1,102 +1,67 @@
 import express from "express";
 import {
-  getEmployees,
-  getOne,
-  getProfile,
   createEmployee,
-  update,
-  remove,
+  getEmployees,
+  getEmployeeById,
+  updateEmployee,
+  deleteEmployee,
+  getAllEmployees
 } from "../controllers/employeeController.js";
-
-import {
-  getMyAllocations,
-  // getActiveAllocations,
-  getUtilizationSummary,
-} from "../controllers/allocationController.js";
 
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/* =========================================================
-   ✅ PUBLIC
-========================================================= */
-router.post("/seed_admin", createEmployee);
+/**
+ * ✅ CREATE — Admin & Finance ONLY
+ */
+router.post(
+  "/",
+  protect,
+  authorize("Admin", "Finance"),
+  createEmployee
+);
 
-/* =========================================================
-   ✅ CREATE
-========================================================= */
-router.post("/", protect, authorize("Admin", "Finance"), createEmployee);
-
-/* =========================================================
-   ✅ READ
-========================================================= */
-router.get("/", protect, authorize("Admin", "Finance", "Manager"), getEmployees);
-
-// Logged‑in user profile
-router.get("/me", protect, getProfile);
-
-/* =========================================================
-   ✅ SELF (EMPLOYEE VIEW)
-========================================================= */
-
-// My allocations
-router.get("/me/allocations", protect, authorize("Employee"), (req, res) => {
-  req.query.employee = req.user.id;
-  return getMyAllocations(req, res);
-});
-
-// // My active allocations
-// router.get("/me/allocations/active", protect, authorize("Employee"), (req, res) => {
-//   req.query.employee = req.user.id;
-//   return getActiveAllocations(req, res);
-// });
-
-// ✅ My utilization (MONTH REQUIRED)
-router.get("/me/utilization", protect, authorize("Employee"), (req, res) => {
-  req.query.employee = req.user.id;
-  return getUtilizationSummary(req, res);
-});
-
-/* =========================================================
-   ✅ ADMIN / Finance / MANAGER
-========================================================= */
-
-// Get allocations of a specific employee
+/**
+ * ✅ READ (ALL) — Admin, Finance, Manager
+ */
 router.get(
-  "/:id/allocations",
+  "/",
   protect,
   authorize("Admin", "Finance", "Manager"),
-  (req, res) => {
-    req.query.employee = req.params.id;
-    return getMyAllocations(req, res);
-  }
+  getEmployees
 );
 
-// Get utilization summary of a specific employee
+/**
+ * ✅ READ (ONE) — Admin, Finance, Manager
+ */
 router.get(
-  "/:id/utilization",
+  "/:_id",
   protect,
   authorize("Admin", "Finance", "Manager"),
-  (req, res) => {
-    req.query.employee = req.params.id;
-    return getUtilizationSummary(req, res);
-  }
+  getEmployeeById
 );
 
-/* =========================================================
-   ✅ EMPLOYEE CRUD
-========================================================= */
-router.patch("/:id", protect, authorize("Admin", "Finance"), update);
-
-router.delete("/:id", protect, authorize("Admin"), remove);
-
-// Get employee by id (profile view)
-router.get(
-  "/:id",
+/**
+ * ✅ UPDATE — Admin & Finance ONLY
+ */
+router.put(
+  "/:_id",
   protect,
-  authorize("Admin", "Finance", "Manager", "Employee"),
-  getOne
+  authorize("Admin", "Finance"),
+  updateEmployee
 );
+
+/**
+ * ✅ DELETE — Admin & Finance ONLY
+ */
+router.delete(
+  "/:_id",
+  protect,
+  authorize("Admin", "Finance"),
+  deleteEmployee
+);
+
+router.get("/", protect, getAllEmployees);
 
 export default router;
