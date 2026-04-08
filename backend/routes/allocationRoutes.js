@@ -1,7 +1,10 @@
 import express from "express";
 import { createAllocation , 
   updateAllocation, 
-  moveAllocation} from "../controllers/allocationController.js";
+  moveAllocation,
+  getAllAllocations,
+  getAllocationsByEmployee
+} from "../controllers/allocationController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -27,5 +30,9 @@ router.put(
   authorize("Admin", "Finance"),
   moveAllocation
 );
+
+router.get("/", getAllAllocations);
+
+router.get("/by-employee", getAllocationsByEmployee);
 
 export default router;

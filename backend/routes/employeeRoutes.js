@@ -5,16 +5,11 @@ import {
   getEmployeeById,
   updateEmployee,
   deleteEmployee,
-  getAllEmployees
 } from "../controllers/employeeController.js";
-
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/**
- * ✅ CREATE — Admin & Finance ONLY
- */
 router.post(
   "/",
   protect,
@@ -22,9 +17,6 @@ router.post(
   createEmployee
 );
 
-/**
- * ✅ READ (ALL) — Admin, Finance, Manager
- */
 router.get(
   "/",
   protect,
@@ -32,36 +24,25 @@ router.get(
   getEmployees
 );
 
-/**
- * ✅ READ (ONE) — Admin, Finance, Manager
- */
 router.get(
-  "/:_id",
+  "/:id",
   protect,
   authorize("Admin", "Finance", "Manager"),
   getEmployeeById
 );
 
-/**
- * ✅ UPDATE — Admin & Finance ONLY
- */
 router.put(
-  "/:_id",
+  "/:id",
   protect,
   authorize("Admin", "Finance"),
   updateEmployee
 );
 
-/**
- * ✅ DELETE — Admin & Finance ONLY
- */
 router.delete(
-  "/:_id",
+  "/:id",
   protect,
   authorize("Admin", "Finance"),
   deleteEmployee
 );
-
-router.get("/", protect, getAllEmployees);
 
 export default router;

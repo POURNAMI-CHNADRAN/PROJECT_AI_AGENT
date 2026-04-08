@@ -1,6 +1,8 @@
 import Employee from "../models/Employee.js";
 import { getNextEmployeeCode } from "../utils/Next.js";
 import Allocation from "../models/Allocation.js";
+import Project from "../models/Project.js";
+import WorkCategory from "../models/WorkCategory.js";
 
 /* ================= CREATE ================= */
 export const createEmployee = async (req, res) => {
@@ -113,19 +115,43 @@ export const getAllEmployees = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 /* ================= READ (ONE) ================= */
-
 export const getEmployeeById = async (req, res) => {
-  const emp = await Employee.findById(req.params._id)
-    .populate("departmentId", "name")
-    .populate("primaryWorkCategoryId", "name")
-    .populate("skills", "name category");
+  try {
+    const employee = await Employee.findById(req.params.id)
+      .populate("primaryWorkCategoryId", "name")
+      .populate("skills");
 
-  if (!emp) {
-    return res.status(404).json({ message: "Employee NOT Found" });
+    if (!employee) {
+      return res.status(404).json({ message: "Employee NOT Found" });
+    }
+
+    // ✅ Fetch allocations SEPARATELY (this is the key fix)
+    const allocations = await Allocation.find({
+      employeeId: employee._id,
+    })
+      .populate("projectId", "name status startDate endDate")
+      .populate("workCategoryId", "name");
+
+    // ✅ Supporting data for drawer
+    const projects = await Project.find({ status: "Active" });
+    const workCategories = await WorkCategory.find({ status: "Active" });
+
+    res.json({
+      success: true,
+      data: {
+        ...employee.toObject(),
+        allocations,
+        projects,
+        workCategories,
+      },
+    });
+
+  } catch (err) {
+    console.error("❌ getEmployeeById Failed:", err);
+    res.status(500).json({ message: "Server Error" });
   }
-
-  res.json({ success: true, data: emp });
 };
 
 /* ================= UPDATE ================= */

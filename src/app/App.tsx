@@ -257,7 +257,7 @@ export default function App() {
 
         {/* ✅ RESOURCE HUB */}
         <Route path="resources" element={<ResourcesLayout />}>
-          <Route index element={<Navigate to="employees" replace />} />
+          <Route index element={<Navigate to="portfolio" replace />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="portfolio" element={<PortfolioDashboard />} />
           <Route path="heatmap" element={<HeatmapScheduler />} />

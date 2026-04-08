@@ -1,247 +1,241 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAnalytics } from "../../hooks/useAnalytics";
+
 import {
+  TrendingUp,
   Users,
-  UserCheck,
-  UserX,
-  TrendingUp
+  Briefcase,
+  AlertTriangle,
+  ArrowUpRight,
 } from "lucide-react";
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
-const API = "http://localhost:5000/api/reports";
-
-/* ================= TYPES ================= */
-type Utilization = {
-  employee_id: string;
-  billable_percent: number;
-  non_billable_percent: number;
-};
-
-type RevenueByProject = {
-  _id: string; // project name (confirmed by backend)
-  revenue: number;
-};
-
-type BenchEmployee = {
-  _id: string;
-  employee_id: string;
-  name: string;
-};
-
-type DashboardSummary = {
-  totalRevenue: number;
-  totalAllocations: number;
-};
+import { BenchTable } from "../components/BenchTable";
+import { SuggestionPanel } from "../components/SuggestionPanel";
+import EmployeeDrawerID from "../components/EmployeeDrawerID";
 
 /* ================= DASHBOARD ================= */
+
 export default function Dashboard() {
-  const [utilization, setUtilization] = useState<Utilization[]>([]);
-  const [revenueProjects, setRevenueProjects] = useState<RevenueByProject[]>([]);
-  const [bench, setBench] = useState<BenchEmployee[]>([]);
-  const [summary, setSummary] = useState<DashboardSummary>({
-    totalRevenue: 0,
-    totalAllocations: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const today = new Date();
 
-  /* ================= FETCH ================= */
-  const fetchDashboard = async () => {
-    try {
-      setLoading(true);
+  /* ---------------- STATE ---------------- */
+  const [month] = useState(today.getMonth() + 1);
+  const [year] = useState(today.getFullYear());
+  const [selectedEmployeeId, setSelectedEmployeeId] =
+    useState<string | null>(null);
 
-      const [
-        summaryRes,
-        utilRes,
-        revenueRes,
-        benchRes
-      ] = await Promise.all([
-        axios.get(`${API}/dashboard`),
-        axios.get(`${API}/utilization`),
-        axios.get(`${API}/revenue-project`),
-        axios.get(`${API}/bench`)
-      ]);
+  const navigate = useNavigate();
 
-      setSummary(summaryRes.data || { totalRevenue: 0, totalAllocations: 0 });
-      setUtilization(Array.isArray(utilRes.data) ? utilRes.data : []);
-      setRevenueProjects(Array.isArray(revenueRes.data) ? revenueRes.data : []);
+  /* ---------------- ANALYTICS ---------------- */
+  const { loading, utilization, bench, revenue, suggestions } =
+    useAnalytics(month, year);
 
-      const benchEmployees = Array.isArray(benchRes.data?.employees)
-        ? benchRes.data.employees
-        : [];
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500 animate-pulse">
+        Loading Resource Intelligence…
+      </div>
+    );
+  }
 
-      setBench(benchEmployees);
+  const safeUtilization = Array.isArray(utilization) ? utilization : [];
+  const safeBench = Array.isArray(bench) ? bench : [];
+  const safeRevenue = Array.isArray(revenue) ? revenue : [];
 
-    } catch (err) {
-      console.error("Dashboard fetch failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
-
-  /* ================= DERIVED METRICS ================= */
-  const totalEmployees = utilization.length;
-
-  const billableEmployees = utilization.filter(
-    u => u.billable_percent > 0
-  ).length;
-
-  const nonBillableEmployees = totalEmployees - billableEmployees;
+  /* ---------------- METRICS ---------------- */
+  const employeeCount = safeUtilization.length;
 
   const avgUtilization =
-    utilization.length > 0
+    employeeCount > 0
       ? Math.round(
-          utilization.reduce((sum, u) => sum + u.billable_percent, 0) /
-            utilization.length
+          safeUtilization.reduce(
+            (s, u) => s + (u.utilization || u.billable_percent || 0),
+            0
+          ) / employeeCount
         )
       : 0;
 
-  /* ================= CHART DATA ================= */
+  const totalBenchHours = safeBench.reduce(
+    (s, b) => s + (b.benchHours || 0),
+    0
+  );
 
-  const billablePieData = [
-    { name: "Billable", value: billableEmployees },
-    { name: "Non‑Billable", value: nonBillableEmployees }
-  ];
+  const criticalBenchCount = safeBench.filter(
+    (b) => b.risk === "HIGH"
+  ).length;
 
-  const revenueTrendData = revenueProjects.map(p => ({
-    name: p._id,
-    revenue: p.revenue
-  }));
+  const totalRevenue = safeRevenue.reduce(
+    (s, r) => s + (r.revenue || 0),
+    0
+  );
 
-  const benchForecastData = [
-    {
-      label: "Current Bench",
-      count: bench.length
-    }
-  ];
-
-  if (loading) {
-    return <p className="p-6">Loading Dashboard...</p>;
-  }
+  /* ---------------- STATUS COLORS ---------------- */
+  const utilizationColor =
+    avgUtilization >= 90
+      ? "emerald"
+      : avgUtilization >= 70
+      ? "amber"
+      : "red";
 
   /* ================= UI ================= */
-  return (
-    <div className="min-h-screen bg-sky-50 p-6 space-y-6">
-      <h1 className="text-2xl font-semibold text-sky-900">Dashboard</h1>
 
-      {/* ================= KPI CARDS ================= */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="Total Employees" value={totalEmployees} icon={<Users />} />
-        <StatCard title="Billable Employees" value={billableEmployees} icon={<UserCheck />} />
-        <StatCard title="Non‑Billable Employees" value={nonBillableEmployees} icon={<UserX />} />
-        <StatCard title="Avg Utilization %" value={`${avgUtilization}%`} icon={<TrendingUp />} />
+  return (
+    <div className="min-h-screen bg-slate-100 p-6 space-y-8">
+
+      {/* ---------------- HEADER ---------------- */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Resource Intelligence Dashboard
+          </h1>
+          <p className="text-sm text-slate-500">
+            {month}/{year} · Workforce · Utilization · Bench
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate("/resources/portfolio")}
+          className="flex items-center gap-2 rounded-xl
+            bg-sky-600 hover:bg-sky-700
+            text-white px-5 py-2.5 shadow-sm"
+        >
+          View Allocations <ArrowUpRight size={16} />
+        </button>
       </div>
 
-      {/* ================= CHARTS ================= */}
-      <div className="grid grid-cols-2 gap-6">
+      {/* ---------------- KPI STRIP ---------------- */}
+      <div className="grid grid-cols-4 gap-6">
 
-        {/* PIE */}
-        <ChartCard title="Billable vs Non‑Billable">
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={billablePieData} dataKey="value" label>
-                <Cell fill="#22c55e" />
-                <Cell fill="#94a3b8" />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        <InsightCard
+          title="Total Workforce"
+          value={employeeCount}
+          subtitle="Active employees"
+          icon={<Users />}
+          color="sky"
+        />
 
-        {/* BAR */}
-        <ChartCard title="Project Allocation">
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={revenueProjects}>
-              <XAxis dataKey="_id" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="revenue" fill="#38bdf8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        <InsightCard
+          title="Avg Utilization"
+          value={`${avgUtilization}%`}
+          subtitle={
+            utilizationColor === "emerald"
+              ? "Healthy utilization"
+              : utilizationColor === "amber"
+              ? "Watch closely"
+              : "Critical under‑utilization"
+          }
+          icon={<TrendingUp />}
+          color={utilizationColor}
+        />
 
-        {/* LINE */}
-        <ChartCard title="Revenue Trend">
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={revenueTrendData}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Line
-                dataKey="revenue"
-                stroke="#0ea5e9"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        <InsightCard
+          title="Bench Hours"
+          value={`${totalBenchHours} h`}
+          subtitle={`${criticalBenchCount} high‑risk employees`}
+          icon={<AlertTriangle />}
+          color={criticalBenchCount > 0 ? "amber" : "emerald"}
+        />
 
-        {/* BENCH */}
-        <ChartCard title="Bench Forecast">
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={benchForecastData}>
-              <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#a5b4fc" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        <InsightCard
+          title="Revenue Impact"
+          value={`₹${totalRevenue.toLocaleString()}`}
+          subtitle="Monthly billing"
+          icon={<Briefcase />}
+          color="indigo"
+        />
 
+      </div>
+
+      {/* ---------------- MAIN PANELS ---------------- */}
+      <div className="grid grid-cols-3 gap-6">
+
+        {/* BENCH TABLE */}
+        <div className="col-span-2 bg-white rounded-2xl p-6 shadow-sm">
+          <SectionHeader
+            title="Bench Overview"
+            description="Employees with unused or at‑risk capacity"
+          />
+          <BenchTable
+            data={safeBench}
+            onSelectEmployee={setSelectedEmployeeId}
+          />
+        </div>
+
+        {/* AI SUGGESTIONS */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <SectionHeader
+            title="Smart Suggestions"
+            description="AI‑driven reallocation insights"
+          />
+          <SuggestionPanel suggestions={suggestions} />
+        </div>
+      </div>
+
+      {/* ---------------- DRAWER ---------------- */}
+      {selectedEmployeeId && (
+        <EmployeeDrawerID
+          employeeId={selectedEmployeeId}
+          onClose={() => setSelectedEmployeeId(null)}
+        />
+      )}
+
+      {/* ---------------- FOOTER ---------------- */}
+      <div className="text-xs text-slate-500 text-right">
+        Employees: {employeeCount} · Bench Records: {safeBench.length}
       </div>
     </div>
   );
 }
 
-/* ================= COMPONENTS ================= */
+/* ================= SUPPORT COMPONENTS ================= */
 
-function StatCard({
+function InsightCard({
   title,
   value,
-  icon
+  subtitle,
+  icon,
+  color,
 }: {
   title: string;
   value: string | number;
+  subtitle: string;
   icon: React.ReactNode;
+  color: "sky" | "emerald" | "amber" | "red" | "indigo";
 }) {
+  const colorMap: Record<string, string> = {
+    sky: "bg-sky-100 text-sky-700",
+    emerald: "bg-emerald-100 text-emerald-700",
+    amber: "bg-amber-100 text-amber-700",
+    red: "bg-red-100 text-red-700",
+    indigo: "bg-indigo-100 text-indigo-700",
+  };
+
   return (
-    <div className="bg-white border p-6 rounded">
-      <div className="flex items-center justify-between mb-2 text-sky-700">
-        <span className="text-sm">{title}</span>
+    <div className="bg-white rounded-2xl p-6 shadow-sm flex justify-between items-start">
+      <div>
+        <p className="text-sm text-slate-500">{title}</p>
+        <h3 className="text-2xl font-bold text-slate-900 mt-1">{value}</h3>
+        <p className="text-xs text-slate-400 mt-2">{subtitle}</p>
+      </div>
+      <div className={`p-3 rounded-xl ${colorMap[color]}`}>
         {icon}
       </div>
-      <div className="text-3xl font-semibold text-sky-900">{value}</div>
     </div>
   );
 }
 
-function ChartCard({
+function SectionHeader({
   title,
-  children
+  description,
 }: {
   title: string;
-  children: React.ReactNode;
+  description: string;
 }) {
   return (
-    <div className="bg-white border p-6 rounded">
-      <h3 className="mb-4 font-medium text-sky-900">{title}</h3>
-      {children}
+    <div className="mb-5">
+      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      <p className="text-sm text-slate-500">{description}</p>
     </div>
   );
 }

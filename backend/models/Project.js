@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 
 const projectSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
 
     client_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -20,25 +16,38 @@ const projectSchema = new mongoose.Schema(
       required: true,
     },
 
-    billingRate: {
-      type: Number,
-      min: 0,
-    },
+    billingRate: { type: Number, min: 0 },
 
-    startDate: {
-      type: Date,
-      required: true,
-    },
-
+    startDate: { type: Date, required: true },
     endDate: Date,
 
+    // ✅ Lifecycle
     status: {
       type: String,
-      enum: ["ACTIVE", "COMPLETED", "ON_HOLD"],
-      default: "ACTIVE",
+      enum: ["PLANNED", "ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"],
+      default: "PLANNED",
     },
+
+    // ✅ Capacity Governance Flags
+    allowAllocations: { type: Boolean, default: false },
+    allowMoves: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+/* ✅ Status → Behavior Mapping */
+projectSchema.pre("save", function (next) {
+  if (this.status === "ACTIVE") {
+    this.allowAllocations = true;
+    this.allowMoves = true;
+  } else if (this.status === "ON_HOLD") {
+    this.allowAllocations = false;
+    this.allowMoves = true; // move OUT allowed
+  } else {
+    this.allowAllocations = false;
+    this.allowMoves = false;
+  }
+  next();
+});
 
 export default mongoose.model("Project", projectSchema);

@@ -7,6 +7,8 @@ import {
   ArrowRightLeft,
   Save,
   XCircle,
+  DollarSign, 
+  MinusCircle 
 } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
@@ -290,7 +292,7 @@ export default function EmployeeDrawer({
           <Section title="Current Allocation">
             {allocations.length === 0 && (
               <div className="bg-yellow-50 border p-3 text-sm rounded">
-                No active allocations — employee is on bench.
+                No Active Allocations — Employee is on Bench.
               </div>
             )}
 
@@ -299,13 +301,38 @@ export default function EmployeeDrawer({
                 key={a._id}
                 className="border rounded-lg p-3 flex justify-between items-center mt-2 hover:bg-gray-50 transition"
               >
-                <div>
-                  <div className="font-medium">{a.projectId?.name}</div>
-                  <div className="text-xs text-gray-500">
-                    {a.allocatedHours}h ·{" "}
-                    {a.isBillable ? "Billable" : "Non‑Billable"}
-                  </div>
+
+              <div>
+                <div className="font-medium text-gray-900">
+                  {a.projectId?.name}
                 </div>
+
+                <div className="text-sm flex items-center gap-2 mt-0.5">
+                  {/* Hours */}
+                  <span className="text-gray-600">
+                    {a.allocatedHours}h
+                  </span>
+
+                  <span className="text-gray-300">•</span>
+
+                  {/* Billable badge */}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${
+                      a.isBillable
+                        ? "bg-green-50 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {a.isBillable ? (
+                      <DollarSign size={12} />
+                    ) : (
+                      <MinusCircle size={12} />
+                    )}
+
+                    {a.isBillable ? "Billable" : "Non‑Billable"}
+                  </span>
+                </div>
+              </div>
 
                 {canEdit && (
                   <div className="flex gap-2">

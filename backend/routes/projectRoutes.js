@@ -3,23 +3,41 @@ import {
   getProjects,
   createProject,
   updateProject,
-  deleteProject
+  changeProjectStatus,
+  archiveProject,
 } from "../controllers/projectController.js";
-
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/* ---------------- READ ---------------- */
+/* ================= READ ================= */
 router.get("/", protect, authorize("Admin", "Finance", "Manager"), getProjects);
 
-/* ---------------- CREATE ---------------- */
+/* ================= CREATE ================= */
 router.post("/", protect, authorize("Admin", "Finance"), createProject);
 
-/* ---------------- UPDATE ---------------- */
-router.patch("/:id", protect, authorize("Admin", "Finance"), updateProject);
+/* ================= UPDATE DATA ================= */
+router.patch(
+  "/:id",
+  protect,
+  authorize("Admin", "Finance"),
+  updateProject
+);
 
-/* ---------------- DELETE ---------------- */
-router.delete("/:id", protect, authorize("Admin"), deleteProject);
+/* ================= STATUS CHANGE ================= */
+router.patch(
+  "/:id/status",
+  protect,
+  authorize("Admin", "Finance"),
+  changeProjectStatus
+);
+
+/* ================= ARCHIVE ================= */
+router.delete(
+  "/:id",
+  protect,
+  authorize("Admin"),
+  archiveProject
+);
 
 export default router;

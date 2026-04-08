@@ -21,6 +21,8 @@ import payrollRoutes from "./routes/payrollRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import workcategoryRoutes from "./routes/workcategoryRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+
 
 dotenv.config();
 connectDB();
@@ -48,8 +50,8 @@ app.use("/api/payroll", payrollRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/workcategories", workcategoryRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api", analyticsRoutes);
 
-// Also serve uploads directory statically
 app.use("/uploads", express.static("uploads"));
 
 app.get("/", (req, res) => {
