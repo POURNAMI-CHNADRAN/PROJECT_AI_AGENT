@@ -253,6 +253,7 @@ export default function Layout() {
           className={cn(
             "bg-sky-200 text-sky-900 flex flex-col",
             "transition-all duration-300 shadow-xl",
+            "pt-16",   
             expanded ? "w-60" : "w-16"
           )}
         >
@@ -301,7 +302,7 @@ export default function Layout() {
         <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* HEADER */}
-          <header className="h-18 bg-white border-b border-neutral-200 flex items-center justify-between px-6">
+          <header className="fixed top-0 left-0 right-0 z-40 h-18 bg-white border-b border-neutral-200 flex items-center justify-between px-6">            
             <img src="/LOGO.png" className="h-18 object-contain" />
 
             <div className="flex items-center gap-4">
@@ -321,7 +322,7 @@ export default function Layout() {
           </header>
 
           {/* ✅ ROUTER CONTENT */}
-          <main className="flex-1 overflow-auto p-6">
+          <main className="flex-1 overflow-auto p-6 mt-16">
             {/* <RouteTracker /> */}
             <Outlet />
           </main>

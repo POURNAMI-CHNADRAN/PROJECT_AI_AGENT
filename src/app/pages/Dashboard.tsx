@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { useAnalytics } from "../../hooks/useAnalytics";
 
 import {
@@ -12,9 +13,9 @@ import {
 
 import { BenchTable } from "../components/BenchTable";
 import { SuggestionPanel } from "../components/SuggestionPanel";
-import EmployeeDrawerID from "../components/EmployeeDrawerID";
+import EmployeeDrawer from "../components/EmployeeDrawer";
 
-/* ================= DASHBOARD ================= */
+const API = import.meta.env.VITE_API_BASE_URL;
 
 export default function Dashboard() {
   const today = new Date();
@@ -22,8 +23,9 @@ export default function Dashboard() {
   /* ---------------- STATE ---------------- */
   const [month] = useState(today.getMonth() + 1);
   const [year] = useState(today.getFullYear());
-  const [selectedEmployeeId, setSelectedEmployeeId] =
-    useState<string | null>(null);
+
+  const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
+  const [loadingEmployee, setLoadingEmployee] = useState(false);
 
   const navigate = useNavigate();
 
@@ -45,7 +47,6 @@ export default function Dashboard() {
 
   /* ---------------- METRICS ---------------- */
   const employeeCount = safeUtilization.length;
-
   const avgUtilization =
     employeeCount > 0
       ? Math.round(
@@ -70,20 +71,35 @@ export default function Dashboard() {
     0
   );
 
-  /* ---------------- STATUS COLORS ---------------- */
   const utilizationColor =
-    avgUtilization >= 90
-      ? "emerald"
-      : avgUtilization >= 70
-      ? "amber"
-      : "red";
+    avgUtilization >= 90 ? "emerald" : avgUtilization >= 70 ? "amber" : "red";
 
-  /* ================= UI ================= */
+  /* ---------------- OPEN DRAWER ---------------- */
+  const openEmployee = async (employeeId: string) => {
+    try {
+      setLoadingEmployee(true);
+
+      const res = await axios.get(
+        `${API}/api/employees/${employeeId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      setSelectedEmployee(res.data?.data);
+    } catch (err) {
+      console.error("Failed to load employee", err);
+    } finally {
+      setLoadingEmployee(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 p-6 space-y-8">
 
-      {/* ---------------- HEADER ---------------- */}
+      {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
@@ -96,114 +112,64 @@ export default function Dashboard() {
 
         <button
           onClick={() => navigate("/resources/portfolio")}
-          className="flex items-center gap-2 rounded-xl
-            bg-sky-600 hover:bg-sky-700
-            text-white px-5 py-2.5 shadow-sm"
+          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700
+          text-white px-5 py-2.5 rounded-xl shadow"
         >
-          View Allocations <ArrowUpRight size={16} />
+          View Allocations
+          <ArrowUpRight size={16} />
         </button>
       </div>
 
-      {/* ---------------- KPI STRIP ---------------- */}
+      {/* KPI STRIP */}
       <div className="grid grid-cols-4 gap-6">
-
-        <InsightCard
-          title="Total Workforce"
-          value={employeeCount}
-          subtitle="Active employees"
-          icon={<Users />}
-          color="sky"
-        />
-
-        <InsightCard
-          title="Avg Utilization"
-          value={`${avgUtilization}%`}
-          subtitle={
-            utilizationColor === "emerald"
-              ? "Healthy utilization"
-              : utilizationColor === "amber"
-              ? "Watch closely"
-              : "Critical under‑utilization"
-          }
-          icon={<TrendingUp />}
-          color={utilizationColor}
-        />
-
-        <InsightCard
-          title="Bench Hours"
-          value={`${totalBenchHours} h`}
-          subtitle={`${criticalBenchCount} high‑risk employees`}
-          icon={<AlertTriangle />}
-          color={criticalBenchCount > 0 ? "amber" : "emerald"}
-        />
-
-        <InsightCard
-          title="Revenue Impact"
-          value={`₹${totalRevenue.toLocaleString()}`}
-          subtitle="Monthly billing"
-          icon={<Briefcase />}
-          color="indigo"
-        />
-
+        <InsightCard title="Workforce" value={employeeCount} icon={<Users />} color="sky" />
+        <InsightCard title="Utilization" value={`${avgUtilization}%`} icon={<TrendingUp />} color={utilizationColor} />
+        <InsightCard title="Bench Hours" value={`${totalBenchHours} h`} icon={<AlertTriangle />} color={criticalBenchCount > 0 ? "amber" : "emerald"} />
+        <InsightCard title="Revenue" value={`₹${totalRevenue.toLocaleString()}`} icon={<Briefcase />} color="indigo" />
       </div>
 
-      {/* ---------------- MAIN PANELS ---------------- */}
+      {/* PANELS */}
       <div className="grid grid-cols-3 gap-6">
-
-        {/* BENCH TABLE */}
-        <div className="col-span-2 bg-white rounded-2xl p-6 shadow-sm">
-          <SectionHeader
-            title="Bench Overview"
-            description="Employees with unused or at‑risk capacity"
-          />
+        <div className="col-span-2 bg-white p-6 rounded-2xl shadow-sm">
+          <SectionHeader title="Bench Overview" description="Employees with unused or risky capacity" />
           <BenchTable
             data={safeBench}
-            onSelectEmployee={setSelectedEmployeeId}
+            onSelectEmployee={(employeeId) => openEmployee(employeeId)}
           />
         </div>
 
-        {/* AI SUGGESTIONS */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <SectionHeader
-            title="Smart Suggestions"
-            description="AI‑driven reallocation insights"
-          />
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
+          <SectionHeader title="Smart Suggestions" description="AI-driven allocation guidance" />
           <SuggestionPanel suggestions={suggestions} />
         </div>
       </div>
 
-      {/* ---------------- DRAWER ---------------- */}
-      {selectedEmployeeId && (
-        <EmployeeDrawerID
-          employeeId={selectedEmployeeId}
-          onClose={() => setSelectedEmployeeId(null)}
-        />
+      {/* LOADING OVERLAY */}
+      {loadingEmployee && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center text-white">
+          Loading employee…
+        </div>
       )}
 
-      {/* ---------------- FOOTER ---------------- */}
-      <div className="text-xs text-slate-500 text-right">
-        Employees: {employeeCount} · Bench Records: {safeBench.length}
-      </div>
+      {/* DRAWER */}
+      {selectedEmployee && (
+        <EmployeeDrawer
+          employee={selectedEmployee}
+          onClose={() => setSelectedEmployee(null)}
+          canEdit={true}
+          projects={selectedEmployee.projects || []}
+          workCategories={selectedEmployee.workCategories || []}
+          refetchEmployees={() => {}}
+        />
+      )}
     </div>
   );
 }
 
-/* ================= SUPPORT COMPONENTS ================= */
+/* ---------------- UI HELPERS ---------------- */
 
-function InsightCard({
-  title,
-  value,
-  subtitle,
-  icon,
-  color,
-}: {
-  title: string;
-  value: string | number;
-  subtitle: string;
-  icon: React.ReactNode;
-  color: "sky" | "emerald" | "amber" | "red" | "indigo";
-}) {
-  const colorMap: Record<string, string> = {
+function InsightCard({ title, value, icon, color }: any) {
+  const map: any = {
     sky: "bg-sky-100 text-sky-700",
     emerald: "bg-emerald-100 text-emerald-700",
     amber: "bg-amber-100 text-amber-700",
@@ -212,29 +178,20 @@ function InsightCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm flex justify-between items-start">
+    <div className="bg-white rounded-2xl p-6 shadow-sm flex justify-between">
       <div>
         <p className="text-sm text-slate-500">{title}</p>
-        <h3 className="text-2xl font-bold text-slate-900 mt-1">{value}</h3>
-        <p className="text-xs text-slate-400 mt-2">{subtitle}</p>
+        <p className="text-2xl font-bold">{value}</p>
       </div>
-      <div className={`p-3 rounded-xl ${colorMap[color]}`}>
-        {icon}
-      </div>
+      <div className={`p-3 rounded-xl ${map[color]}`}>{icon}</div>
     </div>
   );
 }
 
-function SectionHeader({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function SectionHeader({ title, description }: any) {
   return (
-    <div className="mb-5">
-      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+    <div className="mb-4">
+      <h2 className="text-lg font-semibold">{title}</h2>
       <p className="text-sm text-slate-500">{description}</p>
     </div>
   );

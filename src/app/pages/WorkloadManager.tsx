@@ -2,7 +2,7 @@ import { useState } from "react";
 import { apiPatch } from "../../lib/api";
 import { EmployeeSidebar } from "../components/EmpSidebar";
 import { buildDepartments } from "../../utils/buildDepts";
-import { useResourceHeatmapData } from "../../hooks/useHeatMapData";
+import useResourceHeatmapData from "../../hooks/useHeatMapData";
 
 interface Employee {
   _id: string;
@@ -16,13 +16,13 @@ export function WorkloadManager() {
   const year = 2026;
 
   // ✅ Use the same enriched data as HeatmapScheduler
-  const { employees, departments, loading } =
+  const { employees, loading } =
     useResourceHeatmapData(year);
 
   const [selectedEmployee, setSelectedEmployee] =
     useState<Employee | null>(null);
 
-  const sidebarDepartments = buildDepartments(departments, employees);
+  // const sidebarDepartments = buildDepartments(departments, employees);
 
   const reassignTask = async (empId: string) => {
     if (!selectedEmployee) return;
@@ -41,7 +41,7 @@ export function WorkloadManager() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* SIDEBAR */}
-      <EmployeeSidebar departments={sidebarDepartments} />
+      {/* <EmployeeSidebar departments={sidebarDepartments} /> */}
 
       {/* MAIN CONTENT */}
       <div className="flex-1 p-6 overflow-auto">

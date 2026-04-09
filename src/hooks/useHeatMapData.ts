@@ -1,38 +1,67 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
+import API from "../api/api";
 
-const API = import.meta.env.VITE_API_BASE_URL;
+interface HeatmapState {
+  employees: any[];
+  allocations: any[];
+  loading: boolean;
+  error: string | null;
+}
 
-export function useResourceHeatmapData(year: number) {
+function normalizeArray(res: any): any[] {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.data?.data)) return res.data.data;
+  return [];
+}
+
+export default function useResourceHeatmapData(year: number): HeatmapState {
   const [employees, setEmployees] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    const fetchData = async () => {
+      try {
+      const token = localStorage.getItem("token");
 
-    const headers = { Authorization: `Bearer ${token}` };
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      };
 
-    setLoading(true);
+        const [empRes, allocRes] = await Promise.all([
+          axios.get(`${API}/api/employees`, { headers }),
+          axios.get(`${API}/api/allocations`, {
+            headers,
+            params: { year },
+          }),
+        ]);
 
-    Promise.all([
-      fetch(`${API}/api/employees`, { headers }).then(r => r.json()),
-      fetch(`${API}/api/departments`, { headers }).then(r => r.json()),
-      fetch(`${API}/api/allocations/year?year=${year}`, { headers }).then(r =>
-        r.json()
-      ),
-    ])
-      .then(([emps, depts, allocs]) => {
-        setEmployees(Array.isArray(emps) ? emps : []);
-        setDepartments(Array.isArray(depts) ? depts : []);
-        setAllocations(Array.isArray(allocs) ? allocs : []);
-      })
-      .finally(() => setLoading(false));
+        const employeesData = normalizeArray(empRes.data);
+
+        // ✅ Normalize employeeId (CRITICAL FIX)
+        const allocationsData = normalizeArray(allocRes.data).map((a: any) => ({
+          ...a,
+          employeeId:
+            typeof a.employeeId === "object"
+              ? a.employeeId._id
+              : a.employeeId,
+        }));
+
+        setEmployees(employeesData);
+        setAllocations(allocationsData);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load heatmap data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [year]);
 
-  return { employees, departments, allocations, loading };
+  return { employees, allocations, loading, error };
 }

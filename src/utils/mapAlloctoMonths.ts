@@ -1,31 +1,33 @@
+const CAPACITY = 160;
+
 export function mapAllocationsToMonths(
   allocations: any[],
   employee: any,
-  months: any[]
+  months: { month: number; label: string }[]
 ) {
-  const empId = String(employee._id);
+  return months.map(({ month }) => {
+    const monthAllocations = allocations.filter(
+      (a) => a.month === month && a.year === 2026
+    );
 
-  return months.map(m => {
-    const empAllocs = allocations.filter(a => {
-      const allocEmpId = a.employee?._id
-        ? String(a.employee._id)
-        : String(a.employee);
-
-      return allocEmpId === empId && Number(a.month) === Number(m.month);
-    });
-
-    const totalHours = empAllocs.reduce(
-      (sum, a) => sum + Number(a.fte || 0),
+    const totalHours = monthAllocations.reduce(
+      (sum, a) => sum + (a.allocatedHours || 0),
       0
     );
 
-    const billableHours = empAllocs
-      .filter(a => a.isBillable)
-      .reduce((sum, a) => sum + Number(a.fte || 0), 0);
+    const billableHours = monthAllocations
+      .filter((a) => a.isBillable)
+      .reduce((sum, a) => sum + (a.allocatedHours || 0), 0);
+
+    const utilizationPct =
+      CAPACITY > 0 ? Math.round((totalHours / CAPACITY) * 100) : 0;
 
     return {
-      hours: totalHours,
-      billableAmount: billableHours * (employee.ratePerHour || 0),
+      month,
+      totalHours,
+      billableHours,
+      utilizationPct,
+      hasData: totalHours > 0,
     };
   });
 }

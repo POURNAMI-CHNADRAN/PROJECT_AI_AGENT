@@ -485,7 +485,7 @@ export function AllocateModal({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Operation failed");
+      setError(err.response?.data?.message || "Operation Failed");
     } finally {
       setLoading(false);
     }
@@ -493,62 +493,35 @@ export function AllocateModal({
 
   /* ================= UI ================= */
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-[440px] space-y-4">
+return (
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    
+    {/* Overlay */}
+    <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-        <h2 className="text-lg font-semibold">
-          {mode === "create" && "Allocate Resource"}
-          {mode === "edit" && "Edit Allocation"}
-          {mode === "move" && "Move Allocation"}
-        </h2>
+    {/* Modal */}
+    <div className="relative bg-white rounded-xl shadow-xl p-6 w-[440px] space-y-4 z-10">
 
-        {/* ===== CREATE ONLY ===== */}
-        {mode === "create" && (
-          <>
-            <select
-              className="w-full border px-3 py-2 rounded"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-            >
-              <option value="">Select Employee</option>
-              {employees.map((e) => (
-                <option key={e._id} value={e._id}>
-                  {e.employeeCode} · {e.name}
-                </option>
-              ))}
-            </select>
+      <h2 className="text-lg font-semibold">
+        {mode === "create" && "Allocate Resource"}
+        {mode === "edit" && "Edit Allocation"}
+        {mode === "move" && "Move Allocation"}
+      </h2>
 
-            <select
-              className="w-full border px-3 py-2 rounded"
-              value={workCategoryId}
-              onChange={(e) => setWorkCategoryId(e.target.value)}
-            >
-              <option value="">Select Work Category</option>
-              {workCategories.map((w) => (
-                <option key={w._id} value={w._id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-
-        {/* ===== CREATE + MOVE ===== */}
-        {(mode === "create" || mode === "move") && (
-          <select
-            className="w-full border px-3 py-2 rounded"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-          >
-            <option value="">Select Project</option>
-            {projects.map((p) => (
-              <option key={p._id} value={p._id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        )}
+      {(mode === "create" || mode === "move") && (
+        <select
+          className="w-full border px-3 py-2 rounded relative z-50"
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+        >
+          <option value="">Select Project</option>
+          {projects.map((p) => (
+            <option key={p._id} value={p._id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      )}
 
         {/* ===== CREATE + EDIT ===== */}
         {(mode === "create" || mode === "edit") && (

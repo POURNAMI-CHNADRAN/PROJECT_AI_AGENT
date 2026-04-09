@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { useResourceHeatmapData } from "../../hooks/useHeatMapData";
-import { mapAllocationsToMonths } from "../../utils/mapAlloctoMonths";
+import useResourceHeatmapData from "../../hooks/useHeatMapData";
+import { mapAllocationsToMonths } from "../../utils/HeatmapUtils";
 import { EmployeeRow } from "../components/EmployeeRow";
-import { AssignEmployeeModal } from "../components/AssignModal";
 
 const MONTHS = [
   { month: 1, label: "Jan" },
@@ -21,68 +20,60 @@ const MONTHS = [
 
 export default function HeatmapScheduler() {
   const [year] = useState(2026);
-  const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
-  const [assignMonth, setAssignMonth] = useState<number | null>(null);
 
-  const { employees, allocations, loading } =
+  const { employees, allocations, loading, error } =
     useResourceHeatmapData(year);
 
-  if (loading) {
-    return <div className="p-6 text-gray-500">Loading Resources…</div>;
-  }
+  console.log("EMPLOYEES:", employees);
+  console.log("ALLOCATIONS:", allocations);
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
     <div className="flex h-screen bg-gray-50">
       <div className="flex-1 overflow-auto bg-white">
+
         {/* HEADER */}
-        <div className="sticky top-0 flex border-b bg-gray-50 z-10">
+        <div className="sticky top-0 z-10 flex border-b bg-gray-100">
           <div className="w-64 p-3 font-semibold border-r">
             Employee
           </div>
 
-          {MONTHS.map(m => (
+          {MONTHS.map((m) => (
             <div key={m.month} className="w-40 p-3 text-center border-r">
               <div className="font-semibold">{m.label}</div>
-              <div className="text-xs text-gray-500">Hours / Billable</div>
+              <div className="text-xs text-gray-500">
+                Hours / Billable
+              </div>
             </div>
           ))}
         </div>
 
-        {/* EMPLOYEE ROWS */}
-        {employees.map(emp => {
+        {/* ROWS */}
+        {employees.map((emp) => {
+          const empAllocations = allocations.filter(
+            (a) => String(a.employeeId) === String(emp._id)
+          );
+
           const monthlyData = mapAllocationsToMonths(
-            allocations,
-            emp,
-            MONTHS
+            empAllocations,
+            MONTHS,
+            year
           );
 
           return (
             <EmployeeRow
               key={emp._id}
               employee={emp}
-              months={MONTHS}
               monthlyData={monthlyData}
-              onAssign={(month) => {
-                setSelectedEmployee(emp);
-                setAssignMonth(month);
-              }}
+              onAssign={(month: number) =>
+                console.log("Assign clicked", emp.name, month)
+              }
             />
           );
         })}
       </div>
-
-      {/* ASSIGNMENT MODAL */}
-      {selectedEmployee && (
-        <AssignEmployeeModal
-          employee={selectedEmployee}
-          month={assignMonth}
-          year={year}
-          onClose={() => {
-            setSelectedEmployee(null);
-            setAssignMonth(null);
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -39,16 +39,11 @@ export default function EmployeeDrawer({
 
   const [editingInfo, setEditingInfo] = useState(false);
   const [savingInfo, setSavingInfo] = useState(false);
-
+    
   const [editForm, setEditForm] = useState({
-    joiningDate: employee.joiningDate
-      ? employee.joiningDate.slice(0, 10)
-      : "",
-    location: employee.location || "",
-    hourlyCost:
-      employee.hourlyCost !== undefined && employee.hourlyCost !== null
-        ? String(employee.hourlyCost)
-        : "",
+    joiningDate: "",
+    location: "",
+    hourlyCost: "",
   });
 
   const saveEmployeeInfo = async () => {
@@ -117,14 +112,18 @@ export default function EmployeeDrawer({
       )
     : null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex">
-      {/* Overlay */}
-      <div className="flex-1 bg-black/30" onClick={onClose} />
+return (
+  <div className="fixed inset-0 z-50">
 
-      {/* Drawer */}
-      <div className="w-[420px] bg-white shadow-xl h-full flex flex-col">
+    {/* OVERLAY */}
+    <div
+      className="absolute inset-0 bg-black/40"
+      onClick={onClose}
+    />
 
+    {/* DRAWER */}
+    <div className="absolute right-0 top-0 h-full w-[420px] bg-white shadow-xl flex flex-col">
+      
         {/* HEADER */}
         <div className="p-6 border-b flex justify-between items-center">
           <div>
@@ -140,7 +139,7 @@ export default function EmployeeDrawer({
         </div>
 
         {/* BODY */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        <div className="flex-1 overflow-y-auto overflow-x-visible p-6 space-y-8">
 
           {/* EMPLOYEE INFO */}
           <Section
@@ -344,7 +343,7 @@ export default function EmployeeDrawer({
                         setAllocationMode("edit");
                       }}
                     >
-                      <Edit3 size={16} />
+                    <Edit3 size={16} />
                     </button>
                     <button
                       className="p-1.5 rounded hover:bg-amber-50 text-amber-600"
@@ -354,7 +353,7 @@ export default function EmployeeDrawer({
                         setAllocationMode("move");
                       }}
                     >
-                      <ArrowRightLeft size={16} />
+                    <ArrowRightLeft size={16} />
                     </button>
                   </div>
                 )}
@@ -362,8 +361,29 @@ export default function EmployeeDrawer({
             ))}
           </Section>
         </div>
+      </div>
 
-        {/* ALLOCATION MODAL */}
+    {/* ✅ MODAL OUTSIDE DRAWER BUT INSIDE ROOT */}
+    {allocationMode && activeAllocation && (
+      <AllocateModal
+        mode={allocationMode}
+        allocation={activeAllocation}
+        projects={projects}
+        workCategories={workCategories}
+        onClose={() => {
+          setAllocationMode(null);
+          setActiveAllocation(null);
+        }}
+        onSuccess={() => {
+          refetchEmployees();
+          setAllocationMode(null);
+          setActiveAllocation(null);
+        }}
+      />
+    )}
+  </div>
+);
+        {/* ALLOCATION MODAL
         {allocationMode && activeAllocation && (
           <AllocateModal
             mode={allocationMode}
@@ -383,8 +403,8 @@ export default function EmployeeDrawer({
         )}
       </div>
     </div>
-  );
-}
+  ); */}
+
 
 /* ================= HELPERS ================= */
 
@@ -421,4 +441,5 @@ function InfoRow({
       <div className="font-medium">{value}</div>
     </div>
   );
+}
 }
