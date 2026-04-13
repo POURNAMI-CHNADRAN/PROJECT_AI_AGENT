@@ -9,10 +9,9 @@ try {
   // @ts-ignore
   if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) {
     // @ts-ignore
-    API_BASE = import.meta.env.VITE_API_BASE_URL;
-  } else if (process.env.REACT_APP_API_BASE_URL) {
-    API_BASE = process.env.REACT_APP_API_BASE_URL;
-  }
+  const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  } 
 } catch {}
 
 const API = import.meta.env.VITE_API_BASE_URL;

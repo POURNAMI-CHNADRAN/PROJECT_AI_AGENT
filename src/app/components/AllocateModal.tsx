@@ -382,7 +382,7 @@ export function AllocateModal({
     allocation?.employeeId || ""
   );
   const [projectId, setProjectId] = useState(
-    allocation?.projectId?._id || allocation?.projectId || ""
+    allocation?.projectId?._id ?? allocation?.projectId ?? ""
   );
   const [workCategoryId, setWorkCategoryId] = useState(
     allocation?.workCategoryId || ""
@@ -415,12 +415,12 @@ export function AllocateModal({
       /* ================= CREATE ================= */
       if (mode === "create") {
         if (!employeeId || !projectId || !workCategoryId || hours <= 0) {
-          setError("Please fill all required fields");
+          setError("Please Fill All Required Fields");
           return;
         }
 
         if (hours > MONTHLY_CAPACITY) {
-          setError("Allocated hours cannot exceed 160");
+          setError("Allocated Hours Cannot Exceed 160");
           return;
         }
 
@@ -509,15 +509,51 @@ return (
       </h2>
 
       {(mode === "create" || mode === "move") && (
+        <div className="space-y-3">
+
+          {/* Employee (CREATE ONLY) */}
+          {mode === "create" && (
+            <select
+              className="w-full border px-3 py-2 rounded"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+            >
+              <option value="">Select Employee</option>
+              {employees.map((e) => (
+                <option key={e._id} value={e._id}>
+                  {e.employeeCode} · {e.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Project */}
+          <select
+            className="w-full border px-3 py-2 rounded"
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+          >
+            <option value="">Select Project</option>
+            {projects.map((p) => (
+              <option key={p._id} value={p._id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+        </div>
+      )}
+
+      {mode === "create" && (
         <select
-          className="w-full border px-3 py-2 rounded relative z-50"
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          value={workCategoryId}
+          onChange={(e) => setWorkCategoryId(e.target.value)}
         >
-          <option value="">Select Project</option>
-          {projects.map((p) => (
-            <option key={p._id} value={p._id}>
-              {p.name}
+          <option value="">Select Work Category</option>
+          {workCategories.map((w) => (
+            <option key={w._id} value={w._id}>
+              {w.name}
             </option>
           ))}
         </select>

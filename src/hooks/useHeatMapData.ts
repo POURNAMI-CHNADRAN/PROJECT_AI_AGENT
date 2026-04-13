@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import API from "../api/api";
+import api from "../api/api";
 
 interface HeatmapState {
   employees: any[];
   allocations: any[];
+  departments: any[];
   loading: boolean;
   error: string | null;
 }
@@ -19,42 +19,44 @@ function normalizeArray(res: any): any[] {
 export default function useResourceHeatmapData(year: number): HeatmapState {
   const [employees, setEmployees] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-      const token = localStorage.getItem("token");
-
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
-
-        const [empRes, allocRes] = await Promise.all([
-          axios.get(`${API}/api/employees`, { headers }),
-          axios.get(`${API}/api/allocations`, {
-            headers,
-            params: { year },
-          }),
+        const [empRes, allocRes, deptRes] = await Promise.all([
+          api.get("/employees"),
+          api.get("/allocations", { params: { year } }),
+          api.get("/departments"),
         ]);
 
-        const employeesData = normalizeArray(empRes.data);
+        const normalize = (res: any) =>
+          Array.isArray(res)
+            ? res
+            : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res?.data?.data)
+            ? res.data.data
+            : [];
 
-        // ✅ Normalize employeeId (CRITICAL FIX)
-        const allocationsData = normalizeArray(allocRes.data).map((a: any) => ({
+        const employeesData = normalize(empRes.data);
+        const allocationsData = normalize(allocRes.data).map((a: any) => ({
           ...a,
           employeeId:
             typeof a.employeeId === "object"
               ? a.employeeId._id
               : a.employeeId,
         }));
+        const departmentsData = normalize(deptRes.data);
 
         setEmployees(employeesData);
         setAllocations(allocationsData);
+        setDepartments(departmentsData);
       } catch (err) {
         console.error(err);
-        setError("Failed to load heatmap data");
+        setError("Failed to Load Data");
       } finally {
         setLoading(false);
       }
@@ -63,5 +65,5 @@ export default function useResourceHeatmapData(year: number): HeatmapState {
     fetchData();
   }, [year]);
 
-  return { employees, allocations, loading, error };
+  return { employees, allocations, departments, loading, error };
 }

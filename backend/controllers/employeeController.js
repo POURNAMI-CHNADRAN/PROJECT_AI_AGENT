@@ -155,11 +155,10 @@ export const getEmployeeById = async (req, res) => {
 };
 
 /* ================= UPDATE ================= */
-
 export const updateEmployee = async (req, res) => {
   try {
     const updated = await Employee.findByIdAndUpdate(
-      req.params._id,
+      req.params.id,   // ✅ FIXED
       req.body,
       { new: true }
     );
@@ -177,7 +176,7 @@ export const updateEmployee = async (req, res) => {
 /* ================= DELETE ================= */
 export const deleteEmployee = async (req, res) => {
   try {
-    const employee = await Employee.findByIdAndDelete(req.params._id);
+    const employee = await Employee.findByIdAndDelete(req.params.id); 
 
     if (!employee) {
       return res.status(404).json({

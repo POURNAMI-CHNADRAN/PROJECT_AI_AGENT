@@ -14,16 +14,20 @@ interface SidebarDepartment {
   name: string;
   employees: Employee[];
 }
-
 export function buildDepartments(
   departments: Department[] = [],
   employees: Employee[] = []
 ): SidebarDepartment[] {
-  return departments.map(dept => ({
-    _id: dept._id, 
+  return departments.map((dept) => ({
+    _id: dept._id,
     name: dept.name,
-    employees: employees.filter(
-      emp => emp.departmentId?._id === dept._id
-    ),
+    employees: employees.filter((emp) => {
+      const empDeptId =
+        typeof emp.departmentId === "object"
+          ? emp.departmentId._id
+          : emp.departmentId;
+
+      return empDeptId === dept._id;
+    }),
   }));
 }

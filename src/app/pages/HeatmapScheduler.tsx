@@ -24,56 +24,52 @@ export default function HeatmapScheduler() {
   const { employees, allocations, loading, error } =
     useResourceHeatmapData(year);
 
-  console.log("EMPLOYEES:", employees);
-  console.log("ALLOCATIONS:", allocations);
-
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return <div className="p-6">Loading…</div>;
   if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 overflow-auto bg-white">
-
-        {/* HEADER */}
-        <div className="sticky top-0 z-10 flex border-b bg-gray-100">
-          <div className="w-64 p-3 font-semibold border-r">
-            Employee
-          </div>
-
-          {MONTHS.map((m) => (
-            <div key={m.month} className="w-40 p-3 text-center border-r">
-              <div className="font-semibold">{m.label}</div>
-              <div className="text-xs text-gray-500">
-                Hours / Billable
-              </div>
-            </div>
-          ))}
+    <div className="h-screen bg-gray-50 overflow-auto">
+      {/* HEADER */}
+      <div
+        className="grid border-b bg-gray-100 sticky top-0 z-20"
+        style={{ gridTemplateColumns: "250px repeat(12, 140px)" }}
+      >
+        <div className="p-3 font-semibold border-r sticky left-0 bg-gray-100 z-30">
+          Employee
         </div>
 
-        {/* ROWS */}
-        {employees.map((emp) => {
-          const empAllocations = allocations.filter(
-            (a) => String(a.employeeId) === String(emp._id)
-          );
-
-          const monthlyData = mapAllocationsToMonths(
-            empAllocations,
-            MONTHS,
-            year
-          );
-
-          return (
-            <EmployeeRow
-              key={emp._id}
-              employee={emp}
-              monthlyData={monthlyData}
-              onAssign={(month: number) =>
-                console.log("Assign clicked", emp.name, month)
-              }
-            />
-          );
-        })}
+        {MONTHS.map((m) => (
+          <div key={m.month} className="p-3 text-center border-r">
+            <div className="font-semibold">{m.label}</div>
+            <div className="text-xs text-gray-500">Hours</div>
+          </div>
+        ))}
       </div>
+
+      {/* ROWS */}
+      {employees.map((emp) => {
+        if (!emp) return null;
+
+        const empAllocations =
+          allocations.filter((a) => a.employeeId === emp._id) || [];
+
+        const monthlyData = mapAllocationsToMonths(
+          empAllocations,
+          MONTHS,
+          year
+        );
+
+        return (
+          <EmployeeRow
+            key={emp._id}
+            employee={emp}
+            monthlyData={monthlyData}
+            onAssign={(month) =>
+              console.log("Assign", emp.name, month)
+            }
+          />
+        );
+      })}
     </div>
   );
 }

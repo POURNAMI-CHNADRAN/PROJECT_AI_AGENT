@@ -7,10 +7,10 @@ import {
   ArrowRightLeft,
   Save,
   XCircle,
-  DollarSign, 
-  MinusCircle 
+  DollarSign,
+  MinusCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { AllocateModal } from "./AllocateModal";
 
@@ -39,36 +39,53 @@ export default function EmployeeDrawer({
 
   const [editingInfo, setEditingInfo] = useState(false);
   const [savingInfo, setSavingInfo] = useState(false);
-    
+
+  // ✅ FIX 1: Initialize edit form from employee
   const [editForm, setEditForm] = useState({
     joiningDate: "",
     location: "",
     hourlyCost: "",
   });
 
-  const saveEmployeeInfo = async () => {
-    try {
-      setSavingInfo(true);
-      await axios.put(
-        `${API}/api/employees/${employee._id}`,
-        {
-          joiningDate: editForm.joiningDate || null,
-          location: editForm.location,
-          hourlyCost: editForm.hourlyCost
-            ? Number(editForm.hourlyCost)
-            : 0,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      setEditingInfo(false);
-    } finally {
-      setSavingInfo(false);
+  useEffect(() => {
+    setEditForm({
+      joiningDate: employee.joiningDate?.slice(0, 10) || "",
+      location: employee.location || "",
+      hourlyCost: employee.hourlyCost?.toString() || "",
+    });
+  }, [employee]);
+
+const saveEmployeeInfo = async () => {
+  try {
+    setSavingInfo(true);
+
+    console.log("Saving employee id:", employee._id);
+
+    const payload: any = {};
+    if (editForm.joiningDate) payload.joiningDate = editForm.joiningDate;
+    if (editForm.location?.trim()) payload.location = editForm.location.trim();
+    if (editForm.hourlyCost !== "") {
+      payload.hourlyCost = Number(editForm.hourlyCost);
     }
-  };
+
+    await axios.put(
+      `${API}/api/employees/${employee._id}`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    setEditingInfo(false);
+    refetchEmployees();
+  } catch (err) {
+    console.error("Save Failed:", err);
+  } finally {
+    setSavingInfo(false);
+  }
+};
 
   /* ================= ALLOCATIONS ================= */
 
@@ -82,7 +99,6 @@ export default function EmployeeDrawer({
   );
 
   const remainingHours = CAPACITY - bookedHours;
-
   const utilizationPct =
     CAPACITY > 0 ? Math.round((bookedHours / CAPACITY) * 100) : 0;
 
@@ -112,18 +128,15 @@ export default function EmployeeDrawer({
       )
     : null;
 
-return (
-  <div className="fixed inset-0 z-50">
+  return (
+    <div className="fixed inset-0 z-50">
 
-    {/* OVERLAY */}
-    <div
-      className="absolute inset-0 bg-black/40"
-      onClick={onClose}
-    />
+      {/* OVERLAY */}
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-    {/* DRAWER */}
-    <div className="absolute right-0 top-0 h-full w-[420px] bg-white shadow-xl flex flex-col">
-      
+      {/* DRAWER */}
+      <div className="absolute right-0 top-0 h-full w-[420px] bg-white shadow-xl flex flex-col">
+
         {/* HEADER */}
         <div className="p-6 border-b flex justify-between items-center">
           <div>
@@ -139,9 +152,9 @@ return (
         </div>
 
         {/* BODY */}
-        <div className="flex-1 overflow-y-auto overflow-x-visible p-6 space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
-          {/* EMPLOYEE INFO */}
+          {/* ================= EMPLOYEE INFO (UNCHANGED UI) ================= */}
           <Section
             title={
               <div className="flex justify-between items-center">
@@ -150,7 +163,6 @@ return (
                   <button
                     onClick={() => setEditingInfo(true)}
                     className="p-1 rounded hover:bg-gray-100"
-                    title="Edit Employee Info"
                   >
                     <Edit3 size={16} />
                   </button>
@@ -199,20 +211,12 @@ return (
                   }
                 />
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="Hourly Cost"
                   className="w-full border px-3 py-2 rounded"
+                  placeholder="Hourly Cost"
                   value={editForm.hourlyCost}
-                  onChange={(e) => {
-                    if (/^\d*$/.test(e.target.value)) {
-                      setEditForm({
-                        ...editForm,
-                        hourlyCost: e.target.value,
-                      });
-                    }
-                  }}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, hourlyCost: e.target.value })
+                  }
                 />
 
                 <div className="flex justify-end gap-2">
@@ -234,6 +238,7 @@ return (
             )}
           </Section>
 
+          {/* ================= CAPACITY (UNTOUCHED UI) ================= */}
           {/* CAPACITY */}
           <Section title="Capacity">
             <div className="bg-slate-50 rounded-lg p-4 space-y-2">
@@ -363,50 +368,29 @@ return (
         </div>
       </div>
 
-    {/* ✅ MODAL OUTSIDE DRAWER BUT INSIDE ROOT */}
-    {allocationMode && activeAllocation && (
-      <AllocateModal
-        mode={allocationMode}
-        allocation={activeAllocation}
-        projects={projects}
-        workCategories={workCategories}
-        onClose={() => {
-          setAllocationMode(null);
-          setActiveAllocation(null);
-        }}
-        onSuccess={() => {
-          refetchEmployees();
-          setAllocationMode(null);
-          setActiveAllocation(null);
-        }}
-      />
-    )}
-  </div>
-);
-        {/* ALLOCATION MODAL
-        {allocationMode && activeAllocation && (
-          <AllocateModal
-            mode={allocationMode}
-            allocation={activeAllocation}
-            projects={projects}
-            workCategories={workCategories}
-            onClose={() => {
-              setAllocationMode(null);
-              setActiveAllocation(null);
-            }}
-            onSuccess={() => {
-              refetchEmployees();
-              setAllocationMode(null);
-              setActiveAllocation(null);
-            }}
-          />
-        )}
-      </div>
+      {/* ALLOCATION MODAL */}
+      {allocationMode && activeAllocation && (
+        <AllocateModal
+          mode={allocationMode}
+          allocation={activeAllocation}
+          projects={projects}
+          workCategories={workCategories}
+          onClose={() => {
+            setAllocationMode(null);
+            setActiveAllocation(null);
+          }}
+          onSuccess={() => {
+            refetchEmployees();
+            setAllocationMode(null);
+            setActiveAllocation(null);
+          }}
+        />
+      )}
     </div>
-  ); */}
+  );
+}
 
-
-/* ================= HELPERS ================= */
+/* ================= HELPERS (UNCHANGED) ================= */
 
 function Section({
   title,
@@ -441,5 +425,4 @@ function InfoRow({
       <div className="font-medium">{value}</div>
     </div>
   );
-}
 }
