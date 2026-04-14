@@ -121,7 +121,7 @@
 
 //           {/* HEADER */}
 //           <header className="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6">
-//             <img src="/LOGO.png" className="h-10 object-contain" />
+//             <img src="/LOGO_COPY.png" className="h-10 object-contain" />
 
 //             <div className="flex items-center gap-4">
 //               <button className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200 transition">
@@ -303,7 +303,7 @@ export default function Layout() {
 
           {/* HEADER */}
           <header className="fixed top-0 left-0 right-0 z-40 h-18 bg-white border-b border-neutral-200 flex items-center justify-between px-6">            
-            <img src="/LOGO.png" className="h-18 object-contain" />
+            <img src="/LOGO_COPY.png" className="h-18 object-contain" />
 
             <div className="flex items-center gap-4">
               <button className="p-2 bg-neutral-100 rounded-full hover:bg-neutral-200">

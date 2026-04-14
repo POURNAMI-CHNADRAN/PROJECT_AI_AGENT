@@ -8,9 +8,9 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Sidebar */}
       <div className="w-64 bg-white border-r border-neutral-200 p-4 flex flex-col">
-        {/* Logo */}
+        {/* LOGO_COPY */}
         <div className="mb-6 flex justify-center">
-          <img src="/LOGO.png" className="h-16 object-contain" />
+          <img src="/LOGO_COPY.png" className="h-16 object-contain" />
         </div>
 
         {/* Navigation */}

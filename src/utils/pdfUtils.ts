@@ -1,12 +1,12 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import companyLogo from "/LOGO.png"; // Your public logo
+import companyLogo from "/LOGO_COPY.png"; // Your public LOGO_COPY
 
 export const downloadBillingPDF = (billingData: any[]) => {
   const doc = new jsPDF();
   const date = new Date().toLocaleString();
 
-  // Logo
+  // LOGO_COPY
   doc.addImage(companyLogo, "PNG", 10, 10, 25, 25);
 
   // Header

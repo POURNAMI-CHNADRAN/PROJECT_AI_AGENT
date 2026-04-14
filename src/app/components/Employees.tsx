@@ -1,27 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { X, User, Mail, Briefcase, MapPin, DollarSign, Calendar } from "lucide-react";
+import {cn} from "../components/ui/utils";
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-/* ================= TYPES ================= */
-
-interface Department {
-  _id: string;
-  name: string;
-}
-
-interface WorkCategory {
-  _id: string;
-  name: string;
-}
-
-interface Skill {
-  _id: string;
-  name: string;
-  category: string;
-}
-
-/* ================= COMPONENT ================= */
+interface Department { _id: string; name: string; }
+interface WorkCategory { _id: string; name: string; }
+interface Skill { _id: string; name: string; category: string; }
 
 export function CreateEmployeeModal({
   departments,
@@ -32,10 +18,10 @@ export function CreateEmployeeModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  /* ================= STATE ================= */
-
   const [workCategories, setWorkCategories] = useState<WorkCategory[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -49,50 +35,25 @@ export function CreateEmployeeModal({
     status: "Active" as "Active" | "Inactive",
   });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  /* ================= LOAD MASTER DATA ================= */
-
   useEffect(() => {
-    const headers = {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    };
-
     const fetchMasters = async () => {
+      const headers = { Authorization: `Bearer ${localStorage.getItem("token")}` };
       try {
         const [wcRes, skillRes] = await Promise.all([
           axios.get(`${API}/api/workcategories`, { headers }),
           axios.get(`${API}/api/skills`, { headers }),
         ]);
-
-        setWorkCategories(
-          Array.isArray(wcRes.data) ? wcRes.data : wcRes.data.data ?? []
-        );
-
-        setSkills(
-          Array.isArray(skillRes.data)
-            ? skillRes.data
-            : skillRes.data.data ?? []
-        );
+        setWorkCategories(Array.isArray(wcRes.data) ? wcRes.data : wcRes.data.data ?? []);
+        setSkills(Array.isArray(skillRes.data) ? skillRes.data : skillRes.data.data ?? []);
       } catch (err) {
-        console.error("Failed to load master data", err);
+        console.error("Master data failed", err);
       }
     };
-
     fetchMasters();
   }, []);
 
-  /* ================= HELPERS ================= */
-
-  const updateField = <K extends keyof typeof form>(
-    key: K,
-    value: (typeof form)[K]
-  ) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+  const updateField = (key: keyof typeof form, value: any) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const toggleSkill = (skillId: string) => {
@@ -104,186 +65,187 @@ export function CreateEmployeeModal({
     }));
   };
 
-  /* ================= SUBMIT ================= */
-
   const submit = async () => {
-    if (
-      !form.name ||
-      !form.email ||
-      !form.departmentId ||
-      !form.primaryWorkCategoryId
-    ) {
-      setError("Please fill all required fields");
+    if (!form.name || !form.email || !form.departmentId) {
+      setError("Essential Fields are Missing.");
       return;
     }
 
     try {
       setLoading(true);
-      setError("");
-
-      await axios.post(
-        `${API}/api/employees`,
-        {
-          name: form.name,
-          email: form.email,
-          departmentId: form.departmentId,
-          primaryWorkCategoryId: form.primaryWorkCategoryId,
-          skills: form.skills,
-          hourlyCost: Number(form.hourlyCost),
-          joiningDate: form.joiningDate || undefined,
-          location: form.location || undefined,
-          status: form.status,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+      await axios.post(`${API}/api/employees`, 
+        { ...form, hourlyCost: Number(form.hourlyCost) },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }}
       );
-
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to create employee");
+      setError(err.response?.data?.message || "Creation failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= UI ================= */
-
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-[520px] space-y-4 shadow-lg">
-        <h2 className="text-lg font-semibold text-sky-900">
-          Create Employee
-        </h2>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className="bg-white rounded-2xl w-full max-w-[560px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl ring-1 ring-slate-200">
+        
+        {/* HEADER */}
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-sky-900">Onboard New Member</h2>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Resource Directory</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-sky-800">
+            <X size={20} />
+          </button>
+        </div>
 
-        {/* Name */}
-        <input
-          placeholder="Full name"
-          className="w-full border px-3 py-2 rounded"
-          value={form.name}
-          onChange={(e) => updateField("name", e.target.value)}
-        />
+        {/* SCROLLABLE FORM AREA */}
+        <div className="p-8 overflow-y-auto space-y-8">
+          
+          {/* SECTION: Identity */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-bold text-sky-800 uppercase tracking-widest px-1">Identity</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="relative group">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-800 group-focus-within:text-sky-600 transition-colors" />
+                  <input
+                    placeholder="Legal Name"
+                    className="w-full bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 transition-all outline-none"
+                    value={form.name}
+                    onChange={(e) => updateField("name", e.target.value)}
+                  />
+               </div>
+               <div className="relative group">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-800 group-focus-within:text-sky-600 transition-colors" />
+                  <input
+                    type="email"
+                    placeholder="Work Email"
+                    className="w-full bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 transition-all outline-none"
+                    value={form.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                  />
+               </div>
+            </div>
+          </div>
 
-        {/* Email */}
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full border px-3 py-2 rounded"
-          value={form.email}
-          onChange={(e) => updateField("email", e.target.value)}
-        />
+          {/* SECTION: Role & Allocation */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-bold text-sky-800 uppercase tracking-widest px-1">Organization</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <select
+                className="w-full bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 transition-all outline-none appearance-none"
+                value={form.departmentId}
+                onChange={(e) => updateField("departmentId", e.target.value)}
+              >
+                <option value="">Department</option>
+                {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+              </select>
+              <select
+                className="w-full bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 transition-all outline-none appearance-none"
+                value={form.primaryWorkCategoryId}
+                onChange={(e) => updateField("primaryWorkCategoryId", e.target.value)}
+              >
+                <option value="">Work Category</option>
+                {workCategories.map((wc) => <option key={wc._id} value={wc._id}>{wc.name}</option>)}
+              </select>
+            </div>
+          </div>
 
-        {/* Department */}
-        <select
-          className="w-full border px-3 py-2 rounded"
-          value={form.departmentId}
-          onChange={(e) => updateField("departmentId", e.target.value)}
-        >
-          <option value="">Select Department</option>
-          {departments.map((d) => (
-            <option key={d._id} value={d._id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+          {/* SECTION: Skills */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-bold text-sky-800 uppercase tracking-widest px-1">Skills & Capabilities</h3>
+            <div className="flex flex-wrap gap-2">
+              {skills.map((s) => {
+                const selected = form.skills.includes(s._id);
+                return (
+                  <button
+                    key={s._id}
+                    type="button"
+                    onClick={() => toggleSkill(s._id)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-bold transition-all border",
+                      selected
+                        ? "bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-200"
+                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                    )}
+                  >
+                    {s.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        {/* Primary Work Category */}
-        <select
-          className="w-full border px-3 py-2 rounded"
-          value={form.primaryWorkCategoryId}
-          onChange={(e) =>
-            updateField("primaryWorkCategoryId", e.target.value)
-          }
-        >
-          <option value="">Select Primary Work Category</option>
-          {workCategories.map((wc) => (
-            <option key={wc._id} value={wc._id}>
-              {wc.name}
-            </option>
-          ))}
-        </select>
-
-        {/* Skills */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-sky-900">
-            Skills
-          </label>
-
-          <div className="flex flex-wrap gap-3">
-            {skills.map((s) => {
-              const selected = form.skills.includes(s._id);
-              return (
-                <button
-                  key={s._id}
-                  type="button"
-                  onClick={() => toggleSkill(s._id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold
-                    ${selected
-                      ? "bg-emerald-600 text-white"
-                      : "bg-sky-100 text-sky-700 hover:bg-sky-200"}
-                  `}
-                >
-                  {s.name}
-                </button>
-              );
-            })}
+          {/* SECTION: Logistics */}
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-800" />
+                <input
+                  type="date"
+                  className="w-full bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 outline-none"
+                  value={form.joiningDate}
+                  onChange={(e) => updateField("joiningDate", e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-800" />
+                <input
+                  placeholder="Location"
+                  className="w-full bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 outline-none"
+                  value={form.location}
+                  onChange={(e) => updateField("location", e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-800" />
+                <input
+                  type="number"
+                  placeholder="Hourly Rate"
+                  className="w-full bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 outline-none"
+                  value={form.hourlyCost}
+                  onChange={(e) => updateField("hourlyCost", e.target.value)}
+                />
+              </div>
+              <select
+                className="bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-sky-600 outline-none"
+                value={form.status}
+                onChange={(e) => updateField("status", e.target.value)}
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Joining Date */}
-        <input
-          type="date"
-          className="w-full border px-3 py-2 rounded"
-          value={form.joiningDate}
-          onChange={(e) => updateField("joiningDate", e.target.value)}
-        />
+        {/* FOOTER ACTIONS */}
+        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex flex-col items-center justify-center gap-3">
+          
+          <p className="text-xs font-semibold text-red-500 text-center max-w-[300px] truncate">
+            {error}
+          </p>
 
-        {/* Location */}
-        <input
-          placeholder="Location"
-          className="w-full border px-3 py-2 rounded"
-          value={form.location}
-          onChange={(e) => updateField("location", e.target.value)}
-        />
+          <div className="flex flex-col items-center gap-2">
+            
+            <button
+              onClick={submit}
+              disabled={loading}
+              className="px-6 py-2 bg-sky-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-slate-200 hover:bg-sky-700 active:scale-95 disabled:opacity-50 transition-all"
+            >
+              {loading ? "Onboarding..." : "Onboard Member"}
+            </button>
 
-        {/* Hourly Cost */}
-        <input
-          type="number"
-          placeholder="Hourly Cost"
-          className="w-full border px-3 py-2 rounded"
-          value={form.hourlyCost}
-          onChange={(e) => updateField("hourlyCost", e.target.value)}
-        />
+            <button
+              onClick={onClose}
+              className="text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              Cancel
+            </button>
 
-        {/* Status */}
-        <select
-          className="w-full border px-3 py-2 rounded"
-          value={form.status}
-          onChange={(e) =>
-            updateField("status", e.target.value as "Active" | "Inactive")
-          }
-        >
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
-
-        {error && <p className="text-sm text-red-500">{error}</p>}
-
-        {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="px-4 py-2 border rounded">
-            Cancel
-          </button>
-          <button
-            onClick={submit}
-            disabled={loading}
-            className="px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700"
-          >
-            {loading ? "Creating…" : "Create"}
-          </button>
+          </div>
         </div>
       </div>
     </div>
