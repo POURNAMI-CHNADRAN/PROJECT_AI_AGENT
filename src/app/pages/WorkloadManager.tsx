@@ -1,177 +1,170 @@
-import { useState } from "react";
-import { apiPatch } from "../../lib/api";
+import { useState, useMemo } from "react";
 import useResourceHeatmapData from "../../hooks/useHeatMapData";
 import { EmployeeSidebar } from "../components/EmpSidebar";
 import { buildDepartments } from "../../utils/buildDepts";
 
-interface Employee {
-  _id: string;
-  name: string;
-  departmentId?: { _id: string; name: string };
-}
-
 export function WorkloadManager() {
   const year = 2026;
+  const CAPACITY = 160;
+  const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
-  const {
-    employees = [],
-    allocations = [],
-    departments = [],
-    loading,
-  } = useResourceHeatmapData(year);
+  const { employees = [], allocations = [], departments = [], loading } = useResourceHeatmapData(year);
+
+  // 1. Logic: Pre-calculate metrics for the Dashboard Header
+  const stats = useMemo(() => {
+    const calculated = employees.map(emp => {
+      const hours = allocations
+        .filter(a => a.employeeId === emp._id)
+        .reduce((sum, a) => sum + Number(a.allocatedHours || 0), 0);
+      const pct = Math.round((hours / CAPACITY) * 100);
+      return pct > 100 ? 'Over' : pct < 60 ? 'Under' : 'Optimal';
+    });
+    return {
+      over: calculated.filter(s => s === 'Over').length,
+      under: calculated.filter(s => s === 'Under').length,
+      optimal: calculated.filter(s => s === 'Optimal').length
+    };
+  }, [employees, allocations]);
 
   const sidebarDepartments = buildDepartments(departments, employees);
 
-  const [selectedEmployee, setSelectedEmployee] =
-    useState<Employee | null>(null);
-
-  const CAPACITY = 160;
-
-  if (loading) {
-    return <div className="p-6 text-gray-500">Loading workload…</div>;
-  }
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="animate-pulse text-blue-600 font-medium tracking-wide uppercase text-sm">Synchronizing Data...</div>
+    </div>
+  );
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      
-      {/* ✅ SIDEBAR */}
+    <div className="flex h-screen bg-[#F8F9FB] text-slate-900 font-sans">
       <EmployeeSidebar
         departments={sidebarDepartments}
         selectedEmployeeId={selectedEmployee?._id}
-        onEmployeeSelect={(id) => {
-          const emp = employees.find((e) => e._id === id);
-          setSelectedEmployee(emp || null);
-        }}
+        onEmployeeSelect={(id) => setSelectedEmployee(employees.find(e => e._id === id))}
       />
 
-      {/* ✅ MAIN */}
-      <div className="flex-1 p-6 overflow-auto">
-        <h1 className="text-xl font-semibold mb-4">
-          Workload Manager
-        </h1>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* HEADER SECTION */}
+        <header className="p-8 pb-4">
+          <div className="flex justify-between items-end mb-6">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-800">Workload Manager</h1>
+              <p className="text-slate-500 text-sm">Manage resource distribution and burnout risks.</p>
+            </div>
+            <div className="flex gap-2">
+              <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 transition shadow-sm">
+                Export Report
+              </button>
+            </div>
+          </div>
 
-        <div className="bg-white rounded-xl shadow border divide-y">
-          {employees.map((emp) => {
-            const empAllocations = allocations.filter(
-              (a) =>
-                a.employeeId === emp._id &&
-                Number(a.year) === year
-            );
-
-            const totalHours = empAllocations.reduce(
-              (sum, a) => sum + Number(a.allocatedHours || 0),
-              0
-            );
-
-            const utilizationPct =
-              totalHours > 0
-                ? Math.round((totalHours / CAPACITY) * 100)
-                : 0;
-
-            let status: "Optimal" | "Underbilled" | "Overbilled";
-
-            if (utilizationPct > 100) status = "Overbilled";
-            else if (utilizationPct < 60) status = "Underbilled";
-            else status = "Optimal";
-
-            return (
-              <div
-                key={emp._id}
-                className="flex justify-between items-center px-4 py-3 hover:bg-gray-50 transition"
-              >
-                {/* EMPLOYEE */}
-                <div>
-                  <div className="font-medium">
-                    {emp.name || "Unknown"}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {emp.departmentId?.name || "—"}
-                  </div>
-                </div>
-
-                {/* UTILIZATION */}
-                <div className="flex items-center gap-6">
-                  
-                  {/* 🔥 PROGRESS BAR */}
-                  <div className="w-32">
-                    <div className="h-2 bg-gray-200 rounded">
-                      <div
-                        className={`h-2 rounded ${
-                          status === "Overbilled"
-                            ? "bg-red-500"
-                            : status === "Underbilled"
-                            ? "bg-yellow-500"
-                            : "bg-green-500"
-                        }`}
-                        style={{
-                          width: `${Math.min(utilizationPct, 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      {utilizationPct}%
-                    </div>
-                  </div>
-
-                  {/* STATUS */}
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded ${
-                      status === "Overbilled"
-                        ? "bg-red-100 text-red-700"
-                        : status === "Underbilled"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {status}
-                  </span>
-
-                  {/* ACTION */}
-                  {status !== "Optimal" && (
-                    <button
-                      onClick={() => setSelectedEmployee(emp)}
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      Reassign
-                    </button>
-                  )}
-                </div>
+          {/* KPI CARDS */}
+          <div className="grid grid-cols-3 gap-4 mb-2">
+            {[
+              { label: 'High Risk (Over)', count: stats.over, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+              { label: 'Optimal', count: stats.optimal, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+              { label: 'Under-utilized', count: stats.under, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+            ].map((stat, i) => (
+              <div key={i} className={`${stat.bg} ${stat.border} border p-4 rounded-xl shadow-sm`}>
+                <p className="text-xs font-bold uppercase tracking-wider opacity-70 mb-1">{stat.label}</p>
+                <p className={`text-2xl font-black ${stat.color}`}>{stat.count}</p>
               </div>
-            );
-          })}
+            ))}
+          </div>
+        </header>
+
+        {/* MAIN LIST CONTAINER */}
+        <div className="flex-1 overflow-auto px-8 pb-8">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50/50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Employee</th>
+                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Current Workload</th>
+                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Status</th>
+                  <th className="px-6 py-4 text-right"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {employees.map((emp) => {
+                  const hours = allocations
+                    .filter(a => a.employeeId === emp._id)
+                    .reduce((sum, a) => sum + Number(a.allocatedHours || 0), 0);
+                  const pct = Math.round((hours / CAPACITY) * 100);
+                  
+                  const isOver = pct > 100;
+                  const isUnder = pct < 60;
+
+                  return (
+                    <tr key={emp._id} className="group hover:bg-slate-50/80 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-slate-800">{emp.name}</div>
+                        <div className="text-xs text-slate-400">{emp.departmentId?.name || "Unassigned"}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1 max-w-[120px] h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-500 rounded-full ${isOver ? 'bg-red-500' : isUnder ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                              style={{ width: `${Math.min(pct, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-slate-600">{pct}%</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-tight
+                          ${isOver ? 'bg-red-100 text-red-700' : isUnder ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {isOver ? 'Over Capacity' : isUnder ? 'Under-utilized' : 'Optimal'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {(isOver || isUnder) && (
+                          <button 
+                            onClick={() => setSelectedEmployee(emp)}
+                            className="opacity-0 group-hover:opacity-100 bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-black"
+                          >
+                            Rebalance
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* ✅ MODAL */}
+        {/* MODAL - ENHANCED */}
         {selectedEmployee && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-            <div className="bg-white rounded-xl p-6 w-[420px] space-y-4 shadow-xl">
-              <h2 className="text-lg font-semibold">
-                Reassign tasks from {selectedEmployee.name}
-              </h2>
-
-              <p className="text-sm text-gray-500">
-                Choose another employee to take over tasks.
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSelectedEmployee(null)} />
+            <div className="relative bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+              <div className="h-12 w-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+              </div>
+              <h2 className="text-xl font-bold text-slate-800 mb-2">Smart Reassignment</h2>
+              <p className="text-slate-500 text-sm leading-relaxed mb-8">
+                Adjusting workload for <span className="font-bold text-slate-800">{selectedEmployee.name}</span>. 
+                Our system will suggest teammates with available capacity in the {selectedEmployee.departmentId?.name} department.
               </p>
 
-              <div className="flex justify-end gap-2">
-                <button
-                  className="border px-4 py-2 rounded"
-                  onClick={() => setSelectedEmployee(null)}
-                >
-                  Cancel
+              <div className="space-y-3">
+                <button className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-black transition shadow-lg shadow-slate-200">
+                  Find Available Teammates
                 </button>
-
-                <button
-                  className="bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700"
-                  disabled
+                <button 
+                  onClick={() => setSelectedEmployee(null)}
+                  className="w-full bg-white border border-slate-200 text-slate-500 py-3 rounded-xl font-bold hover:bg-slate-50 transition"
                 >
-                  Confirm
+                  Close
                 </button>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

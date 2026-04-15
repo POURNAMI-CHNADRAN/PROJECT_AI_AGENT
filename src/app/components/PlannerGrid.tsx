@@ -63,10 +63,9 @@ export function ResourcePlanningGrid({
               className="h-10 w-80 rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none"
             />
           </div>
-          <button className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-            <TrendingUp className="h-4 w-4 text-slate-400" />
-            Insights
-          </button>
+          <p className="text-slate-500">
+            Total Headcount: <span className="text-slate-900 font-bold">{employees.length}</span>
+          </p>
         </div>
       </div>
 
@@ -187,13 +186,7 @@ export function ResourcePlanningGrid({
       {/* ================= FOOTER ================= */}
       <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-8 py-4 rounded-b-2xl">
         <div className="flex items-center gap-4 text-sm">
-          <p className="text-slate-500 font-medium">
-            System Status: <span className="text-emerald-600 font-bold">Synchronized</span>
-          </p>
           <div className="h-4 w-[1px] bg-slate-200" />
-          <p className="text-slate-500">
-            Total Headcount: <span className="text-slate-900 font-bold">{employees.length}</span>
-          </p>
         </div>
         <div className="flex gap-2">
           <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-white hover:shadow-sm transition-all">
