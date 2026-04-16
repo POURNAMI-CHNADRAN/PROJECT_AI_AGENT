@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
+type ApiResponse<T> = T[] | { data: T[] };
+
 export function useResourceData(month: number, year: number) {
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
@@ -9,79 +11,101 @@ export function useResourceData(month: number, year: number) {
   const [workCategories, setWorkCategories] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const abortRef = useRef<AbortController | null>(null);
 
   const token = localStorage.getItem("token");
-  const mountedRef = useRef(true);
 
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    "Content-Type": "application/json",
+  };
 
-  const normalize = (res: any): any[] => {
-    if (Array.isArray(res)) return [...res];
-    if (Array.isArray(res?.data)) return [...res.data];
+  const normalize = <T,>(res: ApiResponse<T>): T[] => {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.data)) return res.data;
     return [];
   };
 
+  const safeFetch = async <T,>(url: string): Promise<T[]> => {
+    const res = await fetch(url, {
+      headers,
+      signal: abortRef.current?.signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(`${res.status} ${res.statusText}`);
+    }
+
+    return normalize<T>(await res.json());
+  };
+
   const fetchAll = useCallback(async () => {
+    if (!token) {
+      setError("Authentication required");
+      setLoading(false);
+      return;
+    }
+
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
     setLoading(true);
+    setError(null);
 
     try {
       const [
-        empRes,
-        deptRes,
-        projRes,
-        wcRes,
-        revRes,
+        empData,
+        deptData,
+        projData,
+        wcData,
+        revData,
       ] = await Promise.all([
-        fetch(
-          `${API}/api/employees?month=${month}&year=${year}`,
-          { headers }
-        ).then((r) => r.json()),
-        fetch(`${API}/api/departments`, { headers }).then((r) =>
-          r.json()
-        ),
-        fetch(`${API}/api/projects`, { headers }).then((r) =>
-          r.json()
-        ),
-        fetch(`${API}/api/workcategories`, { headers }).then(
-          (r) => r.json()
-        ),
+        safeFetch<any>(`${API}/api/employees?month=${month}&year=${year}`),
+        safeFetch<any>(`${API}/api/departments`),
+        safeFetch<any>(`${API}/api/projects`),
+        safeFetch<any>(`${API}/api/workcategories`),
         month && year
-          ? fetch(
-              `${API}/api/billing?month=${month}&year=${year}`,
-              { headers }
-            ).then((r) => r.json())
+          ? safeFetch<any>(`${API}/api/billing?month=${month}&year=${year}`)
           : Promise.resolve([]),
       ]);
 
-      if (!mountedRef.current) return;
-
-      setEmployees(normalize(empRes));
-      setDepartments(normalize(deptRes));
-      setProjects(normalize(projRes));
-      setWorkCategories(normalize(wcRes));
-      setRevenues(normalize(revRes));
-    } catch (err) {
-      console.error("Failed to load resources", err);
+      setEmployees(empData);
+      setDepartments(deptData);
+      setProjects(projData);
+      setWorkCategories(wcData);
+      setRevenues(revData);
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        console.error("Resource fetch failed:", err);
+        setError("Failed to load resource data");
+      }
     } finally {
-      if (mountedRef.current) setLoading(false);
+      setLoading(false);
     }
   }, [API, month, year, token]);
 
   const refetchEmployees = useCallback(async () => {
-    const empRes = await fetch(
-      `${API}/api/employees?month=${month}&year=${year}`,
-      { headers }
-    ).then((r) => r.json());
+    if (!token) return;
 
-    if (!mountedRef.current) return;
-    setEmployees(normalize(empRes));
+    try {
+      const empData = await safeFetch<any>(
+        `${API}/api/employees?month=${month}&year=${year}`
+      );
+      setEmployees(empData);
+    } catch (err) {
+      if ((err as any).name !== "AbortError") {
+        console.error("Failed to refetch employees", err);
+      }
+    }
   }, [API, month, year, token]);
 
   useEffect(() => {
-    mountedRef.current = true;
     fetchAll();
+
     return () => {
-      mountedRef.current = false;
+      abortRef.current?.abort();
     };
   }, [fetchAll]);
 
@@ -92,6 +116,7 @@ export function useResourceData(month: number, year: number) {
     workCategories,
     revenues,
     loading,
+    error,
     refetchEmployees,
     refetchAll: fetchAll,
   };

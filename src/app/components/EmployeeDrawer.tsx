@@ -3,28 +3,20 @@ import {
   Calendar,
   MapPin,
   Briefcase,
-  Edit3,
   ArrowRightLeft,
+  Clock,
+  TrendingUp,
+  Edit3,
   Save,
-  XCircle,
   DollarSign,
-  MinusCircle,
+  User,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { AllocateModal } from "./AllocateModal";
 
 const API = import.meta.env.VITE_API_BASE_URL;
 const CAPACITY = 160;
-
-interface EmployeeDrawerProps {
-  employee: any;
-  onClose: () => void;
-  canEdit: boolean;
-  projects: any[];
-  workCategories: any[];
-  refetchEmployees: () => void;
-}
 
 export default function EmployeeDrawer({
   employee,
@@ -33,14 +25,14 @@ export default function EmployeeDrawer({
   projects,
   workCategories,
   refetchEmployees,
-}: EmployeeDrawerProps) {
-
-  /* ================= EMPLOYEE INFO EDIT ================= */
-
+}: any) {
   const [editingInfo, setEditingInfo] = useState(false);
   const [savingInfo, setSavingInfo] = useState(false);
+  const [allocationMode, setAllocationMode] = useState<
+    "edit" | "move" | null
+  >(null);
+  const [activeAllocation, setActiveAllocation] = useState<any>(null);
 
-  // ✅ FIX 1: Initialize edit form from employee
   const [editForm, setEditForm] = useState({
     joiningDate: "",
     location: "",
@@ -49,326 +41,376 @@ export default function EmployeeDrawer({
 
   useEffect(() => {
     setEditForm({
-      joiningDate: employee.joiningDate?.slice(0, 10) || "",
-      location: employee.location || "",
-      hourlyCost: employee.hourlyCost?.toString() || "",
+      joiningDate: employee?.joiningDate?.slice(0, 10) || "",
+      location: employee?.location || "",
+      hourlyCost: employee?.hourlyCost?.toString() || "",
     });
   }, [employee]);
 
-const saveEmployeeInfo = async () => {
-  try {
-    setSavingInfo(true);
-
-    console.log("Saving employee id:", employee._id);
-
-    const payload: any = {};
-    if (editForm.joiningDate) payload.joiningDate = editForm.joiningDate;
-    if (editForm.location?.trim()) payload.location = editForm.location.trim();
-    if (editForm.hourlyCost !== "") {
-      payload.hourlyCost = Number(editForm.hourlyCost);
-    }
-
-    await axios.put(
-      `${API}/api/employees/${employee._id}`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      }
-    );
-
-    setEditingInfo(false);
-    refetchEmployees();
-  } catch (err) {
-    console.error("Save Failed:", err);
-  } finally {
-    setSavingInfo(false);
-  }
-};
-
-  /* ================= ALLOCATIONS ================= */
-
-  const allocations = Array.isArray(employee.allocations)
-    ? employee.allocations
-    : [];
+  const allocations = employee?.allocations || [];
 
   const bookedHours = allocations.reduce(
-    (sum: number, a: any) => sum + (a.allocatedHours || 0),
+    (sum: number, item: any) => sum + (item?.allocatedHours || 0),
     0
   );
 
-  const remainingHours = CAPACITY - bookedHours;
-  const utilizationPct =
-    CAPACITY > 0 ? Math.round((bookedHours / CAPACITY) * 100) : 0;
+  const remainingHours = Math.max(0, CAPACITY - bookedHours);
+  const utilizationPct = Math.round((bookedHours / CAPACITY) * 100);
 
-  const utilizationLabel =
-    bookedHours < CAPACITY
-      ? "Underutilized"
-      : bookedHours === CAPACITY
-      ? "Optimal"
-      : "Overallocated";
+  const getUtilColor = (pct: number) => {
+    if (pct > 100) return "text-red-600";
+    if (pct > 80) return "text-orange-500";
+    return "text-emerald-600";
+  };
 
-  /* ================= ALLOCATION MODAL STATE ================= */
+  const experience = useMemo(() => {
+    if (!employee?.joiningDate) return "—";
 
-  const [allocationMode, setAllocationMode] =
-    useState<"edit" | "move" | null>(null);
-  const [activeAllocation, setActiveAllocation] = useState<any>(null);
+    const joined = new Date(employee.joiningDate);
+    const now = new Date();
 
-  /* ================= EXPERIENCE ================= */
+    let years = now.getFullYear() - joined.getFullYear();
+    let months = now.getMonth() - joined.getMonth();
 
-  const joiningDateObj = employee.joiningDate
-    ? new Date(employee.joiningDate)
-    : null;
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
 
-  const experienceYears = joiningDateObj
-    ? Math.floor(
-        (Date.now() - joiningDateObj.getTime()) /
-          (1000 * 60 * 60 * 24 * 365)
-      )
-    : null;
+    return years <= 0 ? `${months}m` : `${years}y ${months}m`;
+  }, [employee]);
+
+  const saveEmployeeInfo = async () => {
+    try {
+      setSavingInfo(true);
+
+      await axios.put(
+        `${API}/api/employees/${employee._id}`,
+        {
+          joiningDate: editForm.joiningDate,
+          location: editForm.location,
+          hourlyCost: Number(editForm.hourlyCost),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      setEditingInfo(false);
+      refetchEmployees();
+    } finally {
+      setSavingInfo(false);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50">
-
-      {/* OVERLAY */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* DRAWER */}
-      <div className="absolute right-0 top-0 h-full w-[420px] bg-white shadow-xl flex flex-col">
-
-        {/* HEADER */}
-        <div className="p-6 border-b flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-semibold">{employee.name}</h2>
-            <p className="text-sm text-gray-500">
-              {employee.employeeCode} ·{" "}
-              {employee.primaryWorkCategoryId?.name || "Unassigned"}
-            </p>
+    <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col overflow-hidden font-sans">
+      {/* HEADER */}
+      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+            {employee?.name?.charAt(0) || "U"}
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100">
-            <X size={18} />
-          </button>
+
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 truncate">
+              {employee?.name}
+            </h1>
+
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="text-slate-400 truncate">
+                {employee?.employeeCode}
+              </span>
+
+              <span className="w-1 h-1 rounded-full bg-slate-300" />
+
+              <span className="text-indigo-600 font-semibold truncate">
+                {employee?.primaryWorkCategoryId?.name || "Staff"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* BODY */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        <button
+          onClick={onClose}
+          className="p-2 rounded-lg hover:bg-red-50 hover:text-red-500 text-slate-400 transition"
+        >
+          <X size={18} />
+        </button>
+      </header>
 
-          {/* ================= EMPLOYEE INFO (UNCHANGED UI) ================= */}
-          <Section
-            title={
-              <div className="flex justify-between items-center">
-                <span>Employee Info</span>
-                {canEdit && !editingInfo && (
-                  <button
-                    onClick={() => setEditingInfo(true)}
-                    className="p-1 rounded hover:bg-gray-100"
-                  >
-                    <Edit3 size={16} />
-                  </button>
-                )}
-              </div>
-            }
-          >
+      {/* BODY */}
+      <main className="flex-1 grid grid-cols-12 overflow-hidden">
+        {/* LEFT SIDE FIXED */}
+        <aside className="col-span-12 lg:col-span-4 xl:col-span-3 bg-white border-r border-slate-200 h-full p-5 flex flex-col justify-between overflow-hidden">
+          {/* TOP */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                Personnel Details
+              </h3>
+
+              {canEdit && !editingInfo && (
+                <button
+                  onClick={() => setEditingInfo(true)}
+                  className="p-1.5 rounded-md text-indigo-500 hover:bg-indigo-50 transition"
+                >
+                  <Edit3 size={14} />
+                </button>
+              )}
+            </div>
+
             {!editingInfo ? (
-              <>
-                <InfoRow
+              <div className="space-y-4">
+                <Row
                   icon={<Calendar size={14} />}
-                  label="Joining Date"
-                  value={joiningDateObj?.toDateString() || "—"}
-                />
-                <InfoRow
-                  icon={<Briefcase size={14} />}
-                  label="Experience"
+                  label="Join Date"
                   value={
-                    experienceYears !== null
-                      ? `${experienceYears} yrs`
+                    employee?.joiningDate
+                      ? new Date(employee.joiningDate).toLocaleDateString()
                       : "—"
                   }
                 />
-                <InfoRow
-                  icon={<MapPin size={14} />}
-                  label="Location"
-                  value={employee.location || "—"}
+
+                <Row
+                  icon={<Briefcase size={14} />}
+                  label="Experience"
+                  value={experience}
                 />
-              </>
+
+                <Row
+                  icon={<MapPin size={14} />}
+                  label="Work Hub"
+                  value={employee?.location || "Remote"}
+                />
+
+                <Row
+                  icon={<DollarSign size={14} />}
+                  label="Rate/Hr"
+                  value={`$${employee?.hourlyCost || 0}`}
+                />
+              </div>
             ) : (
               <div className="space-y-3">
-                <input
+                <Input
+                  label="Joining Date"
                   type="date"
-                  className="w-full border px-3 py-2 rounded"
                   value={editForm.joiningDate}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, joiningDate: e.target.value })
-                  }
-                />
-                <input
-                  className="w-full border px-3 py-2 rounded"
-                  placeholder="Location"
-                  value={editForm.location}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, location: e.target.value })
-                  }
-                />
-                <input
-                  className="w-full border px-3 py-2 rounded"
-                  placeholder="Hourly Cost"
-                  value={editForm.hourlyCost}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, hourlyCost: e.target.value })
+                  onChange={(e: any) =>
+                    setEditForm({
+                      ...editForm,
+                      joiningDate: e.target.value,
+                    })
                   }
                 />
 
-                <div className="flex justify-end gap-2">
-                  <button
+                <Input
+                  label="Location"
+                  value={editForm.location}
+                  onChange={(e: any) =>
+                    setEditForm({
+                      ...editForm,
+                      location: e.target.value,
+                    })
+                  }
+                />
+
+                <Input
+                  label="Hourly Cost"
+                  type="number"
+                  value={editForm.hourlyCost}
+                  onChange={(e: any) =>
+                    setEditForm({
+                      ...editForm,
+                      hourlyCost: e.target.value,
+                    })
+                  }
+                />
+
+                <div className="flex gap-2 pt-2">
+                  <IconButton
+                    icon={<X size={14} />}
                     onClick={() => setEditingInfo(false)}
-                    className="border px-3 py-1.5 rounded flex items-center gap-1"
-                  >
-                    <XCircle size={14} /> Cancel
-                  </button>
+                    color="text-slate-600 hover:bg-slate-100"
+                  />
+
                   <button
                     onClick={saveEmployeeInfo}
-                    disabled={savingInfo}
-                    className="bg-sky-600 text-white px-3 py-1.5 rounded flex items-center gap-1"
+                    className="flex-1 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center justify-center gap-2"
                   >
-                    <Save size={14} /> Save
+                    <Save size={14} />
+                    {savingInfo ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
             )}
-          </Section>
+          </div>
 
-          {/* ================= CAPACITY (UNTOUCHED UI) ================= */}
-          {/* CAPACITY */}
-          <Section title="Capacity">
-            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Monthly Utilization</span>
-                <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    utilizationLabel === "Underutilized"
-                      ? "bg-amber-50 text-amber-700"
-                      : utilizationLabel === "Optimal"
-                      ? "bg-green-50 text-green-700"
-                      : "bg-red-50 text-red-700"
-                  }`}
-                >
-                  {utilizationLabel}
+          {/* BOTTOM */}
+          <div>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 mb-4">
+              Resource Load
+            </h3>
+
+            <div className="flex justify-between items-end mb-4">
+              <div>
+                <span className="text-4xl font-black text-slate-900">
+                  {bookedHours}h
                 </span>
+
+                <span className="text-slate-400 ml-1">/ {CAPACITY}h</span>
               </div>
 
-              <div className="text-xl font-semibold">
-                {bookedHours}h / {CAPACITY}h
-              </div>
+              <span
+                className={`text-lg font-bold ${getUtilColor(
+                  utilizationPct
+                )}`}
+              >
+                {utilizationPct}%
+              </span>
+            </div>
 
-              <div className="h-2 bg-gray-200 rounded">
-                <div
-                  className={`h-2 rounded ${
-                    utilizationPct < 100
-                      ? "bg-yellow-400"
-                      : utilizationPct === 100
-                      ? "bg-green-500"
-                      : "bg-red-500"
-                  }`}
-                  style={{ width: `${Math.min(utilizationPct, 100)}%` }}
-                />
-              </div>
+            <div className="h-2 rounded-full bg-slate-200 overflow-hidden mb-4">
+              <div
+                className={`h-full ${
+                  utilizationPct > 100
+                    ? "bg-red-500"
+                    : utilizationPct > 80
+                    ? "bg-orange-500"
+                    : "bg-indigo-600"
+                }`}
+                style={{
+                  width: `${Math.min(utilizationPct, 100)}%`,
+                }}
+              />
+            </div>
 
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>{utilizationPct}%</span>
-                <span
-                  className={`font-medium flex items-center gap-1 ${
-                    remainingHours < 0
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-slate-400 uppercase font-bold">
+                  Status
+                </p>
+
+                <p
+                  className={`font-bold ${
+                    utilizationPct > 100
                       ? "text-red-600"
-                      : remainingHours < 20
-                      ? "text-amber-600"
-                      : "text-green-600"
+                      : utilizationPct > 80
+                      ? "text-orange-500"
+                      : "text-emerald-600"
                   }`}
                 >
-                  {remainingHours < 0 ? "⚠️" : remainingHours < 20 ? "⏳" : "✅"}
-                  Remaining: {remainingHours}h
-                </span>
+                  {utilizationPct > 100
+                    ? "Overloaded"
+                    : utilizationPct > 80
+                    ? "Optimal"
+                    : "Available"}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-slate-400 uppercase font-bold">
+                  Free Space
+                </p>
+
+                <p className="font-bold text-slate-900">
+                  {remainingHours}h
+                </p>
               </div>
             </div>
-          </Section>
+          </div>
+        </aside>
 
-          {/* CURRENT ALLOCATION */}
-          <Section title="Current Allocation">
-            {allocations.length === 0 && (
-              <div className="bg-yellow-50 border p-3 text-sm rounded">
-                No Active Allocations — Employee is on Bench.
-              </div>
-            )}
+        {/* RIGHT SIDE */}
+        <section className="col-span-12 lg:col-span-8 xl:col-span-9 p-6 overflow-y-auto">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              <TrendingUp
+                size={17}
+                className="text-indigo-500"
+              />
+              Project Allocations
+            </h3>
 
-            {allocations.map((a: any) => (
-              <div
-                key={a._id}
-                className="border rounded-lg p-3 flex justify-between items-center mt-2 hover:bg-gray-50 transition"
-              >
+            <span className="text-xs font-semibold bg-white border border-slate-200 px-2 py-1 rounded-lg text-slate-500">
+              {allocations.length} Active
+            </span>
+          </div>
 
-              <div>
-                <div className="font-medium text-gray-900">
-                  {a.projectId?.name}
-                </div>
+          {allocations.length === 0 ? (
+            <div className="h-52 bg-white rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
+              <User size={32} className="mb-2 opacity-40" />
+              Currently on Bench
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+              {allocations.map((a: any) => (
+                <div
+                  key={a._id}
+                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition group"
+                >
+                  <div className="flex justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase text-indigo-500 mb-1">
+                        Project
+                      </p>
 
-                <div className="text-sm flex items-center gap-2 mt-0.5">
-                  {/* Hours */}
-                  <span className="text-gray-600">
-                    {a.allocatedHours}h
-                  </span>
+                      <h4 className="font-bold text-slate-900 truncate">
+                        {a?.projectId?.name || "Unnamed"}
+                      </h4>
+                    </div>
 
-                  <span className="text-gray-300">•</span>
-
-                  {/* Billable badge */}
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${
-                      a.isBillable
-                        ? "bg-green-50 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {a.isBillable ? (
-                      <DollarSign size={12} />
-                    ) : (
-                      <MinusCircle size={12} />
-                    )}
-
-                    {a.isBillable ? "Billable" : "Non‑Billable"}
-                  </span>
-                </div>
-              </div>
-
-                {canEdit && (
-                  <div className="flex gap-2">
-                    <button
-                      className="p-1.5 rounded hover:bg-sky-50 text-sky-600"
-                      title="Edit Allocation"
-                      onClick={() => {
-                        setActiveAllocation(a);
-                        setAllocationMode("edit");
-                      }}
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded-md shrink-0 ${
+                        a.isBillable
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
                     >
-                    <Edit3 size={16} />
-                    </button>
-                    <button
-                      className="p-1.5 rounded hover:bg-amber-50 text-amber-600"
-                      title="Move Allocation"
-                      onClick={() => {
-                        setActiveAllocation(a);
-                        setAllocationMode("move");
-                      }}
-                    >
-                    <ArrowRightLeft size={16} />
-                    </button>
+                      {a.isBillable
+                        ? "Billable"
+                        : "Internal"}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
-          </Section>
-        </div>
-      </div>
 
-      {/* ALLOCATION MODAL */}
+                  <div className="flex items-center mt-4 pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-slate-600">
+                      <Clock size={12} />
+                      {a.allocatedHours}h
+                    </div>
+
+                    {canEdit && (
+                      <div className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <IconButton
+                          icon={<Edit3 size={13} />}
+                          onClick={() => {
+                            setActiveAllocation(a);
+                            setAllocationMode("edit");
+                          }}
+                          color="text-indigo-600 hover:bg-indigo-50"
+                        />
+
+                        <IconButton
+                          icon={<ArrowRightLeft size={13} />}
+                          onClick={() => {
+                            setActiveAllocation(a);
+                            setAllocationMode("move");
+                          }}
+                          color="text-sky-600 hover:bg-sky-50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+      {/* MODAL */}
       {allocationMode && activeAllocation && (
         <AllocateModal
           mode={allocationMode}
@@ -390,39 +432,49 @@ const saveEmployeeInfo = async () => {
   );
 }
 
-/* ================= HELPERS (UNCHANGED) ================= */
+/* COMPONENTS */
 
-function Section({
-  title,
-  children,
-}: {
-  title: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function Row({ icon, label, value }: any) {
   return (
-    <div>
-      <h3 className="text-sm font-semibold mb-3">{title}</h3>
-      {children}
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-slate-500 text-xs">
+        {icon}
+        {label}
+      </div>
+
+      <span className="text-xs font-bold text-slate-800 text-right">
+        {value}
+      </span>
     </div>
   );
 }
 
-function InfoRow({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon?: React.ReactNode;
-}) {
+function Input({ label, ...props }: any) {
   return (
-    <div className="flex justify-between text-sm mb-2">
-      <div className="flex gap-2 text-gray-500">
-        {icon}
+    <div>
+      <label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">
         {label}
-      </div>
-      <div className="font-medium">{value}</div>
+      </label>
+
+      <input
+        {...props}
+        className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+      />
     </div>
+  );
+}
+
+function IconButton({
+  icon,
+  onClick,
+  color,
+}: any) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-8 h-8 rounded-md flex items-center justify-center transition ${color}`}
+    >
+      {icon}
+    </button>
   );
 }

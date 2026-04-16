@@ -1,100 +1,117 @@
 import { useMemo, useState } from "react";
-import { Plus, Users, Building2, Briefcase, TrendingUp, UserCheck, UserX } from "lucide-react";
+import {
+  Plus,
+  Clock,
+  DollarSign,
+  Users,
+  Building2,
+  Briefcase,
+  TrendingUp,
+  UserCheck,
+  UserX,
+} from "lucide-react";
+
 import { useResourceData } from "../../hooks/useResourceData";
+import { useAnalytics } from "../../hooks/useAnalytics";
 import { CreateEmployeeModal } from "../components/Employees";
+import { KpiCard } from "../components/KPICard";
 import { cn } from "../components/ui/utils";
 
 export default function EmployeesPage() {
-  const {
-    employees,
-    departments,
-    projects,
-    loading,
-    refetchEmployees,
-  } = useResourceData(0, 0);
-
+  const { employees, departments, projects, loading, refetchEmployees } = useResourceData(0, 0);
+  const { utilization, bench, revenue } = useAnalytics(0, 0);
   const [showCreate, setShowCreate] = useState(false);
 
-  const metrics = useMemo(() => {
-    return {
-      total: employees.length,
-      active: employees.filter(e => e.status === "Active").length,
-      inactive: employees.filter(e => e.status === "Inactive").length,
-      departments: departments.length,
-      projects: projects.length,
-    };
-  }, [employees, departments, projects]);
+  /* ================= CALCULATIONS ================= */
+  const metrics = useMemo(() => ({
+    total: employees.length,
+    active: employees.filter((e) => e.status === "Active").length,
+    inactive: employees.filter((e) => e.status === "Inactive").length,
+    departments: departments.length,
+    projects: projects.length,
+  }), [employees, departments, projects]);
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-sky-100 border-t-sky-500" />
-          <p className="text-sm font-semibold text-zinc-400 tracking-wide">REFRESHING DATA...</p>
-        </div>
+  const avgUtilization = utilization.length > 0
+    ? Math.round(utilization.reduce((sum: number, u: any) => sum + (u.utilization || 0), 0) / utilization.length)
+    : 0;
+
+  const totalBench = bench.reduce((sum: number, b: any) => sum + (b.benchHours || 0), 0);
+  const totalRevenue = revenue.reduce((sum: number, r: any) => sum + (r.revenue || 0), 0);
+  const totalAvailableHours = utilization.length * 160;
+
+  if (loading) return (
+    <div className="flex h-[80vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-2">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-sky-100 border-t-sky-500" />
+        <p className="text-[10px] font-bold text-zinc-400 tracking-widest">LOADING ECOSYSTEM</p>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    /* Using standard system sans-serif stack */
-    <div className="max-w-[1600px] mx-auto space-y-10 font-sans antialiased text-zinc-900">
+    // Max-height set to 100vh minus typical navbar height to prevent page scroll
+    <div className="h-full max-w-[1600px] mx-auto space-y-5 p-2 font-sans antialiased text-zinc-900 overflow-hidden">
       
-      {/* ================= SECTION HEADER ================= */}
-      <div className="flex items-center justify-between border-b border-sky-50 pb-8">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900">
-            Workforce <span className="text-sky-600">Overview</span>
+      {/* ================= HEADER (Compact) ================= */}
+      <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-zinc-900">
+            Workforce <span className="text-sky-600">Intelligence</span>
           </h2>
-          <p className="text-base font-medium text-zinc-500">
-            Monitor headcount, departmental growth, and project distribution.
-          </p>
+          <p className="text-xs font-medium text-zinc-500">Real-time resource distribution & performance.</p>
         </div>
 
         <button
           onClick={() => setShowCreate(true)}
-          className="group relative flex items-center gap-2 overflow-hidden px-6 py-3 bg-sky-600 text-white text-sm font-bold rounded-xl transition-all hover:bg-sky-700 active:scale-95 shadow-lg shadow-sky-200"
+          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-zinc-800 active:scale-95 transition-all shadow-md"
         >
-          <Plus size={18} strokeWidth={3} />
+          <Plus size={16} strokeWidth={3} />
           <span>Add Employee</span>
         </button>
       </div>
 
-      {/* ================= METRICS GRID ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <MetricCard 
-          icon={<Users size={22} />} 
-          label="Total Headcount" 
-          value={metrics.total} 
-          variant="sky" 
+      {/* ================= TOP METRICS (Ultra Compact) ================= */}
+      <div className="grid grid-cols-5 gap-4">
+        <MetricTile icon={<Users size={16} />} label="Total" value={metrics.total} color="zinc" />
+        <MetricTile icon={<UserCheck size={16} />} label="Active" value={metrics.active} color="emerald" />
+        <MetricTile icon={<UserX size={16} />} label="Inactive" value={metrics.inactive} color="rose" />
+        <MetricTile icon={<Building2 size={16} />} label="Depts" value={metrics.departments} color="blue" />
+        <MetricTile icon={<Briefcase size={16} />} label="Projects" value={metrics.projects} color="amber" />
+      </div>
+
+      {/* ================= KPI SECTION ================= */}
+      <div className="grid grid-cols-4 gap-4">
+        <KpiCard
+          label="Total Capacity"
+          value={totalAvailableHours.toLocaleString()}
+          subtext="Monthly available"
+          icon={<Clock size={20} className="text-blue-600" />}
+          variant="blue"
         />
-        <MetricCard 
-          icon={<UserCheck size={22} />} 
-          label="Active Talent" 
-          value={metrics.active} 
-          variant="emerald" 
+        <KpiCard
+          label="Bench Strength"
+          value={`${totalBench}h`}
+          subtext={`${bench.length} on bench`}
+          icon={<Users size={20} className="text-orange-600" />}
+          variant="orange"
         />
-        <MetricCard 
-          icon={<UserX size={22} />} 
-          label="Inactive" 
-          value={metrics.inactive} 
-          variant="rose" 
+        <KpiCard
+          label="Revenue Projection"
+          value={`₹${(totalRevenue / 100000).toFixed(1)}L`}
+          subtext="Monthly Forecast"
+          icon={<DollarSign size={20} className="text-emerald-600" />}
+          variant="emerald"
         />
-        <MetricCard 
-          icon={<Building2 size={22} />} 
-          label="Departments" 
-          value={metrics.departments} 
-          variant="indigo" 
-        />
-        <MetricCard 
-          icon={<Briefcase size={22} />} 
-          label="Active Projects" 
-          value={metrics.projects} 
-          variant="amber" 
+        <KpiCard
+          label="Utilization"
+          value={`${avgUtilization}%`}
+          subtext={avgUtilization > 75 ? "Optimal Range" : "Warning: Low"}
+          icon={<TrendingUp size={20} className="text-purple-600" />}
+          variant="purple"
         />
       </div>
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       {showCreate && (
         <CreateEmployeeModal
           departments={departments}
@@ -109,50 +126,22 @@ export default function EmployeesPage() {
   );
 }
 
-// ================= PREMIUM METRIC CARD =================
-function MetricCard({
-  icon,
-  label,
-  value,
-  variant,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  variant: "sky" | "emerald" | "indigo" | "amber" | "rose";
-}) {
-  const styles = {
-    sky: "bg-sky-50 text-sky-600 ring-sky-100",
-    emerald: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    indigo: "bg-indigo-50 text-indigo-600 ring-indigo-100",
-    amber: "bg-amber-50 text-amber-600 ring-amber-100",
-    rose: "bg-rose-50 text-rose-600 ring-rose-100",
+/* ================= COMPACT METRIC TILE ================= */
+function MetricTile({ icon, label, value, color }: { icon: any, label: string, value: number, color: string }) {
+  const colors: Record<string, string> = {
+    zinc: "bg-zinc-100 text-zinc-600",
+    emerald: "bg-emerald-100 text-emerald-600",
+    rose: "bg-rose-100 text-rose-600",
+    blue: "bg-blue-100 text-blue-600",
+    amber: "bg-amber-100 text-amber-600",
   };
 
   return (
-    <div className="group relative p-6 rounded-2xl border border-zinc-100 bg-white transition-all duration-300 hover:border-sky-200 hover:shadow-[0_20px_40px_-15px_rgba(0,163,255,0.1)]">
-      <div className="flex flex-col gap-5">
-        {/* Icon Container */}
-        <div className={cn(
-          "flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-inset shadow-sm transition-transform group-hover:scale-110",
-          styles[variant]
-        )}>
-          {icon}
-        </div>
-        
-        <div className="space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400">
-            {label}
-          </p>
-          <div className="flex items-center justify-between">
-            <span className="text-3xl font-bold tracking-tighter text-zinc-900">
-              {value.toLocaleString()}
-            </span>
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-emerald-50">
-                <TrendingUp size={12} className="text-emerald-500" />
-            </div>
-          </div>
-        </div>
+    <div className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 bg-white shadow-sm">
+      <div className={cn("p-2 rounded-lg", colors[color])}>{icon}</div>
+      <div>
+        <p className="text-[10px] font-bold uppercase text-zinc-400 leading-none mb-1">{label}</p>
+        <p className="text-lg font-black text-zinc-900 leading-none">{value}</p>
       </div>
     </div>
   );
