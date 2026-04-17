@@ -10,6 +10,7 @@ import {
   Save,
   DollarSign,
   User,
+  Mail,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
@@ -59,7 +60,7 @@ export default function EmployeeDrawer({
 
   const getUtilColor = (pct: number) => {
     if (pct > 100) return "text-red-600";
-    if (pct > 80) return "text-orange-500";
+    if (pct > 80) return "text-green-800";
     return "text-emerald-600";
   };
 
@@ -120,7 +121,7 @@ export default function EmployeeDrawer({
             </h1>
 
             <div className="flex items-center gap-2 text-[11px]">
-              <span className="text-slate-400 truncate">
+              <span className="text-sky-700 truncate">
                 {employee?.employeeCode}
               </span>
 
@@ -148,7 +149,7 @@ export default function EmployeeDrawer({
           {/* TOP */}
           <div>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-900">
                 Personnel Details
               </h3>
 
@@ -164,6 +165,10 @@ export default function EmployeeDrawer({
 
             {!editingInfo ? (
               <div className="space-y-4">
+                <Row
+                //  value={employee?.name?}
+                />
+
                 <Row
                   icon={<Calendar size={14} />}
                   label="Join Date"
@@ -189,7 +194,13 @@ export default function EmployeeDrawer({
                 <Row
                   icon={<DollarSign size={14} />}
                   label="Rate/Hr"
-                  value={`$${employee?.hourlyCost || 0}`}
+                  value={`₹${employee?.hourlyCost?.toLocaleString("en-IN") || 0}`}
+                />
+
+                <Row
+                  icon={<Mail size={14} />}
+                  label="Email"
+                  value={employee?.email || "—"}
                 />
               </div>
             ) : (
@@ -250,7 +261,7 @@ export default function EmployeeDrawer({
 
           {/* BOTTOM */}
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 mb-4">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-900 mb-4">
               Resource Load
             </h3>
 
@@ -260,7 +271,7 @@ export default function EmployeeDrawer({
                   {bookedHours}h
                 </span>
 
-                <span className="text-slate-400 ml-1">/ {CAPACITY}h</span>
+                <span className="text-slate-600 ml-1 text-2xl">/ {CAPACITY}h</span>
               </div>
 
               <span
@@ -276,9 +287,9 @@ export default function EmployeeDrawer({
               <div
                 className={`h-full ${
                   utilizationPct > 100
-                    ? "bg-red-500"
+                    ? "bg-green-500"
                     : utilizationPct > 80
-                    ? "bg-orange-500"
+                    ? "bg-green-500"
                     : "bg-indigo-600"
                 }`}
                 style={{
@@ -289,7 +300,7 @@ export default function EmployeeDrawer({
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <p className="text-slate-400 uppercase font-bold">
+                <p className="text-sky-800 uppercase font-bold">
                   Status
                 </p>
 
@@ -298,8 +309,8 @@ export default function EmployeeDrawer({
                     utilizationPct > 100
                       ? "text-red-600"
                       : utilizationPct > 80
-                      ? "text-orange-500"
-                      : "text-emerald-600"
+                      ? "text-green-700"
+                      : "text-orange-600"
                   }`}
                 >
                   {utilizationPct > 100
@@ -311,11 +322,11 @@ export default function EmployeeDrawer({
               </div>
 
               <div className="text-right">
-                <p className="text-slate-400 uppercase font-bold">
+                <p className="text-sky-800 uppercase font-bold">
                   Free Space
                 </p>
 
-                <p className="font-bold text-slate-900">
+                <p className="font-bold text-orange-400">
                   {remainingHours}h
                 </p>
               </div>
@@ -366,7 +377,7 @@ export default function EmployeeDrawer({
                       className={`text-[10px] font-bold px-2 py-1 rounded-md shrink-0 ${
                         a.isBillable
                           ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-100 text-slate-600"
+                          : "bg-yellow-100 text-yellow-700"
                       }`}
                     >
                       {a.isBillable
@@ -376,7 +387,7 @@ export default function EmployeeDrawer({
                   </div>
 
                   <div className="flex items-center mt-4 pt-3 border-t border-slate-100">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-slate-600">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-sky-700">
                       <Clock size={12} />
                       {a.allocatedHours}h
                     </div>
@@ -478,3 +489,5 @@ function IconButton({
     </button>
   );
 }
+
+

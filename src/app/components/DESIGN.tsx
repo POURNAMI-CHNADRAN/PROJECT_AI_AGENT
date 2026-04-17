@@ -9,6 +9,8 @@ import {
   Edit3,
   Save,
   DollarSign,
+  User,
+  Mail,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
@@ -17,15 +19,6 @@ import { AllocateModal } from "./AllocateModal";
 const API = import.meta.env.VITE_API_BASE_URL;
 const CAPACITY = 160;
 
-interface EmployeeDrawerProps {
-  employee: any;
-  onClose: () => void;
-  canEdit: boolean;
-  projects: any[];
-  workCategories: any[];
-  refetchEmployees: () => void;
-}
-
 export default function EmployeeDrawer({
   employee,
   onClose,
@@ -33,10 +26,12 @@ export default function EmployeeDrawer({
   projects,
   workCategories,
   refetchEmployees,
-}: EmployeeDrawerProps) {
+}: any) {
   const [editingInfo, setEditingInfo] = useState(false);
   const [savingInfo, setSavingInfo] = useState(false);
-  const [allocationMode, setAllocationMode] = useState<"edit" | "move" | null>(null);
+  const [allocationMode, setAllocationMode] = useState<
+    "edit" | "move" | null
+  >(null);
   const [activeAllocation, setActiveAllocation] = useState<any>(null);
 
   const [editForm, setEditForm] = useState({
@@ -47,44 +42,63 @@ export default function EmployeeDrawer({
 
   useEffect(() => {
     setEditForm({
-      joiningDate: employee.joiningDate?.slice(0, 10) || "",
-      location: employee.location || "",
-      hourlyCost: employee.hourlyCost?.toString() || "",
+      joiningDate: employee?.joiningDate?.slice(0, 10) || "",
+      location: employee?.location || "",
+      hourlyCost: employee?.hourlyCost?.toString() || "",
     });
   }, [employee]);
 
-  const allocations = employee.allocations || [];
-  const bookedHours = allocations.reduce((sum: number, item: any) => sum + (item.allocatedHours || 0), 0);
+  const allocations = employee?.allocations || [];
+
+  const bookedHours = allocations.reduce(
+    (sum: number, item: any) => sum + (item?.allocatedHours || 0),
+    0
+  );
+
   const remainingHours = Math.max(0, CAPACITY - bookedHours);
   const utilizationPct = Math.round((bookedHours / CAPACITY) * 100);
 
-  // Dynamic color for utilization
   const getUtilColor = (pct: number) => {
     if (pct > 100) return "text-red-600";
-    if (pct > 80) return "text-orange-500";
+    if (pct > 80) return "text-green-800";
     return "text-emerald-600";
   };
 
   const experience = useMemo(() => {
-    if (!employee.joiningDate) return "—";
+    if (!employee?.joiningDate) return "—";
+
     const joined = new Date(employee.joiningDate);
     const now = new Date();
+
     let years = now.getFullYear() - joined.getFullYear();
     let months = now.getMonth() - joined.getMonth();
-    if (months < 0) { years--; months += 12; }
-    return years <= 0 ? `${months} Months` : `${years}y ${months}m`;
-  }, [employee.joiningDate]);
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    return years <= 0 ? `${months}m` : `${years}y ${months}m`;
+  }, [employee]);
 
   const saveEmployeeInfo = async () => {
     try {
       setSavingInfo(true);
-      await axios.put(`${API}/api/employees/${employee._id}`, {
-        joiningDate: editForm.joiningDate,
-        location: editForm.location,
-        hourlyCost: Number(editForm.hourlyCost),
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+
+      await axios.put(
+        `${API}/api/employees/${employee._id}`,
+        {
+          joiningDate: editForm.joiningDate,
+          location: editForm.location,
+          hourlyCost: Number(editForm.hourlyCost),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
       setEditingInfo(false);
       refetchEmployees();
     } finally {
@@ -93,153 +107,313 @@ export default function EmployeeDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col font-sans">
-      {/* HEADER - Deep Slate for contrast */}
-      <header className="h-24 px-8 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
-        <div className="flex flex-col">
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            {employee.name}
-          </h1>
-          <div className="flex items-center gap-3 mt-1">
-            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold uppercase tracking-wider">
-              {employee.employeeCode}
-            </span>
-            <span className="text-indigo-600 font-semibold text-sm">
-              {employee.primaryWorkCategoryId?.name || "General Staff"}
-            </span>
+    <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col overflow-hidden font-sans">
+      {/* HEADER */}
+      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+            {employee?.name?.charAt(0) || "U"}
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 truncate">
+              {employee?.name}
+            </h1>
+
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="text-sky-700 truncate">
+                {employee?.employeeCode}
+              </span>
+
+              <span className="w-1 h-1 rounded-full bg-slate-300" />
+
+              <span className="text-indigo-600 font-semibold truncate">
+                {employee?.primaryWorkCategoryId?.name || "Staff"}
+              </span>
+            </div>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center justify-center text-slate-500"
+          className="p-2 rounded-lg hover:bg-red-50 hover:text-red-500 text-slate-400 transition"
         >
-          <X size={20} />
+          <X size={18} />
         </button>
       </header>
 
       {/* BODY */}
-      <main className="flex-1 overflow-hidden grid grid-cols-12 gap-6 p-8">
-        
-        {/* LEFT PANEL - STATS & INFO */}
-        <aside className="col-span-12 lg:col-span-4 xl:col-span-3 space-y-6 overflow-y-auto pr-2">
-          
-          <Card title="Personnel Details">
+      <main className="flex-1 grid grid-cols-12 overflow-hidden">
+        {/* LEFT SIDE FIXED */}
+        <aside className="col-span-12 lg:col-span-4 xl:col-span-3 bg-white border-r border-slate-200 h-full p-5 flex flex-col justify-between overflow-hidden">
+          {/* TOP */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-900">
+                Personnel Details
+              </h3>
+
+              {canEdit && !editingInfo && (
+                <button
+                  onClick={() => setEditingInfo(true)}
+                  className="p-1.5 rounded-md text-indigo-500 hover:bg-indigo-50 transition"
+                >
+                  <Edit3 size={14} />
+                </button>
+              )}
+            </div>
+
             {!editingInfo ? (
               <div className="space-y-4">
-                <Row icon={<Calendar size={16} />} label="Join Date" value={employee.joiningDate ? new Date(employee.joiningDate).toLocaleDateString() : "—"} />
-                <Row icon={<Briefcase size={16} />} label="Experience" value={experience} />
-                <Row icon={<MapPin size={16} />} label="Work Hub" value={employee.location || "Remote"} />
-                <Row icon={<DollarSign size={16} />} label="Rate/Hr" value={`$${employee.hourlyCost || 0}`} />
-                
-                {canEdit && (
-                  <button
-                    onClick={() => setEditingInfo(true)}
-                    className="w-full mt-4 h-11 rounded-xl bg-sky-200 hover:bg-sky-00 text-black font-medium transition-all shadow-sm flex items-center justify-center gap-2"
-                  >
-                    <Edit3 size={16} /> Edit Profile
-                  </button>
-                )}
+                <Row
+                  icon={<Calendar size={14} />}
+                  label="Join Date"
+                  value={
+                    employee?.joiningDate
+                      ? new Date(employee.joiningDate).toLocaleDateString()
+                      : "—"
+                  }
+                />
+
+                <Row
+                  icon={<Briefcase size={14} />}
+                  label="Experience"
+                  value={experience}
+                />
+
+                <Row
+                  icon={<MapPin size={14} />}
+                  label="Work Hub"
+                  value={employee?.location || "Remote"}
+                />
+
+                <Row
+                  icon={<DollarSign size={14} />}
+                  label="Rate/Hr"
+                  value={`₹${employee?.hourlyCost?.toLocaleString("en-IN") || 0}`}
+                />
+
+                <Row
+                  icon={<Mail size={14} />}
+                  label="Email"
+                  value={employee?.email || "—"}
+                />
               </div>
             ) : (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <Input label="Joining Date" type="date" value={editForm.joiningDate} onChange={(e: any) => setEditForm({...editForm, joiningDate: e.target.value})} />
-                <Input label="Location" value={editForm.location} onChange={(e: any) => setEditForm({...editForm, location: e.target.value})} />
-                <Input label="Hourly Cost" type="number" value={editForm.hourlyCost} onChange={(e: any) => setEditForm({...editForm, hourlyCost: e.target.value})} />
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button onClick={() => setEditingInfo(false)} className="h-10 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Cancel</button>
-                  <button onClick={saveEmployeeInfo} className="h-10 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 flex items-center justify-center gap-2">
-                    {savingInfo ? "..." : <><Save size={14} /> Save</>}
+              <div className="space-y-3">
+                <Input
+                  label="Joining Date"
+                  type="date"
+                  value={editForm.joiningDate}
+                  onChange={(e: any) =>
+                    setEditForm({
+                      ...editForm,
+                      joiningDate: e.target.value,
+                    })
+                  }
+                />
+
+                <Input
+                  label="Location"
+                  value={editForm.location}
+                  onChange={(e: any) =>
+                    setEditForm({
+                      ...editForm,
+                      location: e.target.value,
+                    })
+                  }
+                />
+
+                <Input
+                  label="Hourly Cost"
+                  type="number"
+                  value={editForm.hourlyCost}
+                  onChange={(e: any) =>
+                    setEditForm({
+                      ...editForm,
+                      hourlyCost: e.target.value,
+                    })
+                  }
+                />
+
+                <div className="flex gap-2 pt-2">
+                  <IconButton
+                    icon={<X size={14} />}
+                    onClick={() => setEditingInfo(false)}
+                    color="text-slate-600 hover:bg-slate-100"
+                  />
+
+                  <button
+                    onClick={saveEmployeeInfo}
+                    className="flex-1 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Save size={14} />
+                    {savingInfo ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
             )}
-          </Card>
+          </div>
 
-          <Card title="Resource Load">
+          {/* BOTTOM */}
+          <div>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-900 mb-4">
+              Resource Load
+            </h3>
+
             <div className="flex justify-between items-end mb-4">
               <div>
-                <span className="text-4xl font-black text-slate-900">{bookedHours}h</span>
-                <span className="text-slate-400 font-medium ml-1">/ {CAPACITY}h</span>
+                <span className="text-4xl font-black text-slate-900">
+                  {bookedHours}h
+                </span>
+
+                <span className="text-slate-600 ml-1 text-2xl">/ {CAPACITY}h</span>
               </div>
-              <span className={`text-xl font-bold ${getUtilColor(utilizationPct)}`}>
+
+              <span
+                className={`text-lg font-bold ${getUtilColor(
+                  utilizationPct
+                )}`}
+              >
                 {utilizationPct}%
               </span>
             </div>
 
-            <div className="h-3 bg-slate-200 rounded-full overflow-hidden mb-6">
-              <div 
-                className={`h-full transition-all duration-500 ${utilizationPct > 100 ? 'bg-red-500' : 'bg-indigo-600'}`}
-                style={{ width: `${Math.min(utilizationPct, 100)}%` }}
+            <div className="h-2 rounded-full bg-slate-200 overflow-hidden mb-4">
+              <div
+                className={`h-full ${
+                  utilizationPct > 100
+                    ? "bg-green-500"
+                    : utilizationPct > 80
+                    ? "bg-green-500"
+                    : "bg-indigo-600"
+                }`}
+                style={{
+                  width: `${Math.min(utilizationPct, 100)}%`,
+                }}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+            <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <p className="text-[10px] uppercase font-bold text-slate-400">Status</p>
-                <p className={`font-bold ${utilizationPct > 90 ? 'text-red-600' : 'text-emerald-600'}`}>
-                  {utilizationPct > 100 ? 'Overloaded' : utilizationPct > 80 ? 'Optimal' : 'Available'}
+                <p className="text-sky-800 uppercase font-bold">
+                  Status
+                </p>
+
+                <p
+                  className={`font-bold ${
+                    utilizationPct > 100
+                      ? "text-red-600"
+                      : utilizationPct > 80
+                      ? "text-green-700"
+                      : "text-orange-600"
+                  }`}
+                >
+                  {utilizationPct > 100
+                    ? "Overloaded"
+                    : utilizationPct > 80
+                    ? "Optimal"
+                    : "Available"}
                 </p>
               </div>
+
               <div className="text-right">
-                <p className="text-[10px] uppercase font-bold text-slate-400">Free Space</p>
-                <p className="font-bold text-slate-900">{remainingHours}h</p>
+                <p className="text-sky-800 uppercase font-bold">
+                  Free Space
+                </p>
+
+                <p className="font-bold text-orange-400">
+                  {remainingHours}h
+                </p>
               </div>
             </div>
-          </Card>
+          </div>
         </aside>
 
-        {/* RIGHT PANEL - ASSIGNMENTS */}
-        <section className="col-span-12 lg:col-span-8 xl:col-span-9 h-full min-h-0 flex flex-col">
-          <Card title="Current Project Assignments" fullHeight>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 overflow-y-auto pr-2 max-h-full pb-8">
-              {allocations.length === 0 ? (
-                <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-3xl text-cyan-700">
-                  <TrendingUp size={40} className="mb-4" />
-                  <p className="font-medium">No Projects Assigned</p>
-                  <p className="text-sm">This employee is currently on the Bench.</p>
-                </div>
-              ) : (
-                allocations.map((a: any) => (
-                  <div key={a._id} className="group flex flex-col bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h4 className="font-bold text-slate-900 text-lg leading-tight group-hover:text-indigo-700 transition-colors">
-                          {a.projectId?.name}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1.5 text-slate-500">
-                          <Clock size={14} className="text-indigo-500" />
-                          <span className="text-sm font-semibold">{a.allocatedHours} Hours / 160 </span>
-                        </div>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                        a.isBillable ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                      }`}>
-                        {a.isBillable ? "Billable" : "Internal"}
-                      </span>
+        {/* RIGHT SIDE */}
+        <section className="col-span-12 lg:col-span-8 xl:col-span-9 p-6 overflow-y-auto">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              <TrendingUp
+                size={17}
+                className="text-indigo-500"
+              />
+              Project Allocations
+            </h3>
+
+            <span className="text-xs font-semibold bg-white border border-slate-200 px-2 py-1 rounded-lg text-slate-500">
+              {allocations.length} Active
+            </span>
+          </div>
+
+          {allocations.length === 0 ? (
+            <div className="h-52 bg-white rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
+              <User size={32} className="mb-2 opacity-40" />
+              Currently on Bench
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+              {allocations.map((a: any) => (
+                <div
+                  key={a._id}
+                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition group"
+                >
+                  <div className="flex justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase text-indigo-500 mb-1">
+                        Project
+                      </p>
+
+                      <h4 className="font-bold text-slate-900 truncate">
+                        {a?.projectId?.name || "Unnamed"}
+                      </h4>
+                    </div>
+
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded-md shrink-0 ${
+                        a.isBillable
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {a.isBillable
+                        ? "Billable"
+                        : "Internal"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center mt-4 pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-sky-700">
+                      <Clock size={12} />
+                      {a.allocatedHours}h
                     </div>
 
                     {canEdit && (
-                      <div className="flex gap-2 mt-auto pt-4 border-t border-slate-50">
-                        <button
-                          onClick={() => { setActiveAllocation(a); setAllocationMode("edit"); }}
-                          className="flex-1 h-9 rounded-lg border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 flex items-center justify-center gap-2"
-                        >
-                          <Edit3 size={14} /> Edit
-                        </button>
-                        <button
-                          onClick={() => { setActiveAllocation(a); setAllocationMode("move"); }}
-                          className="flex-1 h-9 rounded-lg bg-sky-200 text-black text-sm font-bold hover:bg-sky-300 flex items-center justify-center gap-2 transition-colors"
-                        >
-                          <ArrowRightLeft size={14} /> Move
-                        </button>
+                      <div className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <IconButton
+                          icon={<Edit3 size={13} />}
+                          onClick={() => {
+                            setActiveAllocation(a);
+                            setAllocationMode("edit");
+                          }}
+                          color="text-indigo-600 hover:bg-indigo-50"
+                        />
+
+                        <IconButton
+                          icon={<ArrowRightLeft size={13} />}
+                          onClick={() => {
+                            setActiveAllocation(a);
+                            setAllocationMode("move");
+                          }}
+                          color="text-sky-600 hover:bg-sky-50"
+                        />
                       </div>
                     )}
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
-          </Card>
+          )}
         </section>
       </main>
 
@@ -250,37 +424,32 @@ export default function EmployeeDrawer({
           allocation={activeAllocation}
           projects={projects}
           workCategories={workCategories}
-          onClose={() => { setAllocationMode(null); setActiveAllocation(null); }}
-          onSuccess={() => { refetchEmployees(); setAllocationMode(null); setActiveAllocation(null); }}
+          onClose={() => {
+            setAllocationMode(null);
+            setActiveAllocation(null);
+          }}
+          onSuccess={() => {
+            refetchEmployees();
+            setAllocationMode(null);
+            setActiveAllocation(null);
+          }}
         />
       )}
     </div>
   );
 }
 
-/* REFINED UI HELPERS */
-
-function Card({ title, children, fullHeight }: any) {
-  return (
-    <div className={`bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col ${fullHeight ? "h-full" : "h-fit"}`}>
-      <h3 className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-black mb-5">
-        {title}
-      </h3>
-      <div className={fullHeight ? "flex-1 min-h-0" : ""}>
-        {children}
-      </div>
-    </div>
-  );
-}
+/* COMPONENTS */
 
 function Row({ icon, label, value }: any) {
   return (
-    <div className="flex justify-between items-center py-1">
-      <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
-        <span className="text-indigo-500">{icon}</span>
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-slate-500 text-xs">
+        {icon}
         {label}
       </div>
-      <span className="font-bold text-slate-900 text-sm">
+
+      <span className="text-xs font-bold text-slate-800 text-right">
         {value}
       </span>
     </div>
@@ -289,14 +458,32 @@ function Row({ icon, label, value }: any) {
 
 function Input({ label, ...props }: any) {
   return (
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+    <div>
+      <label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">
         {label}
       </label>
+
       <input
         {...props}
-        className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+        className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
       />
     </div>
   );
 }
+
+function IconButton({
+  icon,
+  onClick,
+  color,
+}: any) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-8 h-8 rounded-md flex items-center justify-center transition ${color}`}
+    >
+      {icon}
+    </button>
+  );
+}
+
+
