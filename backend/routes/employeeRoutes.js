@@ -5,6 +5,7 @@ import {
   getEmployeeById,
   updateEmployee,
   deleteEmployee,
+  getMyProfile,
 } from "../controllers/employeeController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -16,6 +17,8 @@ router.post(
   authorize("Admin", "Finance"),
   createEmployee
 );
+
+router.get("/me", protect, getMyProfile);
 
 router.get(
   "/",

@@ -156,9 +156,9 @@ export default function Projects() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="py-20 text-center text-slate-400">Loading resources...</td></tr>
+                <tr><td colSpan={5} className="py-20 text-center text-slate-400">Loading Resources...</td></tr>
               ) : filteredProjects.length === 0 ? (
-                <tr><td colSpan={5} className="py-20 text-center text-slate-400 font-medium">No matching projects found.</td></tr>
+                <tr><td colSpan={5} className="py-20 text-center text-slate-400 font-medium">No Matching Projects Found.</td></tr>
               ) : filteredProjects.map((p) => (
                 <ProjectRow 
                   key={p._id} 
@@ -189,9 +189,10 @@ function ProjectRow({ project, userRole, onEdit, onDelete }: any) {
             {project.name}
             <ChevronRight size={14} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
           </span>
-          <span className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-            <Building2 size={12} /> {typeof project.client_id === 'string' ? 'Managed Account' : project.client_id?.client_name}
-          </span>
+        <span className="text-xs text-slate-400 flex items-center gap-1 mt-1">
+          <Building2 size={12} />
+          {project.client_id?.client_name || "Managed Account"}
+        </span>
         </div>
       </td>
 

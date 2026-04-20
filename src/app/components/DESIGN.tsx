@@ -1,489 +1,441 @@
+import React, { useState, useEffect, useMemo } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/authContext";
+import Chatbot from "./Chatbot";
+import { cn } from "./ui/utils";
+
 import {
-  X,
-  Calendar,
-  MapPin,
+  LayoutDashboard,
+  Users,
+  Building2,
   Briefcase,
-  ArrowRightLeft,
+  FolderKanban,
+  FileText,
   Clock,
-  TrendingUp,
-  Edit3,
-  Save,
   DollarSign,
+  Brain,
+  UserCog,
+  Bell,
   User,
-  Mail,
+  LogOut,
+  ChevronRight,
+  Search,
+  Command,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import { AllocateModal } from "./AllocateModal";
 
-const API = import.meta.env.VITE_API_BASE_URL;
-const CAPACITY = 160;
+export default function Layout() {
+  const { user, loading, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-export default function EmployeeDrawer({
-  employee,
-  onClose,
-  canEdit,
-  projects,
-  workCategories,
-  refetchEmployees,
-}: any) {
-  const [editingInfo, setEditingInfo] = useState(false);
-  const [savingInfo, setSavingInfo] = useState(false);
-  const [allocationMode, setAllocationMode] = useState<
-    "edit" | "move" | null
-  >(null);
-  const [activeAllocation, setActiveAllocation] = useState<any>(null);
+  /* Sidebar collapsed by default */
+  const [expanded, setExpanded] = useState(false);
 
-  const [editForm, setEditForm] = useState({
-    joiningDate: "",
-    location: "",
-    hourlyCost: "",
-  });
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  /* Employee Search */
+  const [search, setSearch] = useState("");
+  const [showSearchBox, setShowSearchBox] = useState(false);
 
   useEffect(() => {
-    setEditForm({
-      joiningDate: employee?.joiningDate?.slice(0, 10) || "",
-      location: employee?.location || "",
-      hourlyCost: employee?.hourlyCost?.toString() || "",
-    });
-  }, [employee]);
+    const closeMenus = () => {
+      setShowNotifications(false);
+      setShowProfileMenu(false);
+      setShowSearchBox(false);
+    };
 
-  const allocations = employee?.allocations || [];
+    window.addEventListener("click", closeMenus);
+    return () => window.removeEventListener("click", closeMenus);
+  }, []);
 
-  const bookedHours = allocations.reduce(
-    (sum: number, item: any) => sum + (item?.allocatedHours || 0),
-    0
-  );
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-sky-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sky-700 font-medium">Loading Workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const remainingHours = Math.max(0, CAPACITY - bookedHours);
-  const utilizationPct = Math.round((bookedHours / CAPACITY) * 100);
+  if (!user) return null;
 
-  const getUtilColor = (pct: number) => {
-    if (pct > 100) return "text-red-600";
-    if (pct > 80) return "text-green-800";
-    return "text-emerald-600";
-  };
+  /* Example Employees */
+  const employees = [
+    { id: 1, name: "John David", role: "Developer" },
+    { id: 2, name: "Sarah Lee", role: "Designer" },
+    { id: 3, name: "Michael Roy", role: "Finance" },
+    { id: 4, name: "Emma Watson", role: "HR" },
+    { id: 5, name: "Daniel Jose", role: "Admin" },
+  ];
 
-  const experience = useMemo(() => {
-    if (!employee?.joiningDate) return "—";
+  const filteredEmployees = useMemo(() => {
+    if (!search.trim()) return [];
+    return employees.filter((emp) =>
+      emp.name.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search]);
 
-    const joined = new Date(employee.joiningDate);
-    const now = new Date();
-
-    let years = now.getFullYear() - joined.getFullYear();
-    let months = now.getMonth() - joined.getMonth();
-
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
-
-    return years <= 0 ? `${months}m` : `${years}y ${months}m`;
-  }, [employee]);
-
-  const saveEmployeeInfo = async () => {
-    try {
-      setSavingInfo(true);
-
-      await axios.put(
-        `${API}/api/employees/${employee._id}`,
+  const navGroups = [
+    {
+      group: "Overview",
+      items: [
         {
-          joiningDate: editForm.joiningDate,
-          location: editForm.location,
-          hourlyCost: Number(editForm.hourlyCost),
+          path: "/dashboard",
+          label: "Dashboard",
+          icon: LayoutDashboard,
+          roles: ["Admin", "Finance"],
         },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+          path: "/ai-insights",
+          label: "AI Insights",
+          icon: Brain,
+          roles: ["Admin"],
+        },
+      ],
+    },
+    {
+      group: "Management",
+      items: [
+        {
+          path: "/projects",
+          label: "Projects",
+          icon: FolderKanban,
+          roles: ["Admin", "Finance"],
+        },
+        {
+          path: "/resources/portfolio",
+          label: "Resources",
+          icon: Users,
+          roles: ["Admin", "Finance"],
+        },
+        {
+          path: "/clients",
+          label: "Clients",
+          icon: Briefcase,
+          roles: ["Admin"],
+        },
+      ],
+    },
+    {
+      group: "Operations",
+      items: [
+        {
+          path: "/stories",
+          label: "Stories",
+          icon: FileText,
+          roles: ["Admin", "Finance", "Employee"],
+        },
+        {
+          path: "/timesheets",
+          label: "Timesheets",
+          icon: Clock,
+          roles: ["Admin", "Finance", "Employee"],
+        },
+        {
+          path: "/billing",
+          label: "Billing",
+          icon: DollarSign,
+          roles: ["Admin"],
+        },
+      ],
+    },
+    {
+      group: "Settings",
+      items: [
+        {
+          path: "/user-management",
+          label: "Users",
+          icon: UserCog,
+          roles: ["Admin"],
+        },
+        {
+          path: "/segmentations",
+          label: "Org Config",
+          icon: Building2,
+          roles: ["Admin"],
+        },
+        {
+          path: "/my-profile",
+          label: "My Profile",
+          icon: User,
+          roles: ["Admin", "Finance", "Employee"],
+        },
+      ],
+    },
+  ];
 
-      setEditingInfo(false);
-      refetchEmployees();
-    } finally {
-      setSavingInfo(false);
-    }
-  };
+  const isActive = (path: string) =>
+    location.pathname === path ||
+    location.pathname.startsWith(path + "/");
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col overflow-hidden font-sans">
-      {/* HEADER */}
-      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
-            {employee?.name?.charAt(0) || "U"}
-          </div>
-
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-slate-900 truncate">
-              {employee?.name}
-            </h1>
-
-            <div className="flex items-center gap-2 text-[11px]">
-              <span className="text-sky-700 truncate">
-                {employee?.employeeCode}
-              </span>
-
-              <span className="w-1 h-1 rounded-full bg-slate-300" />
-
-              <span className="text-indigo-600 font-semibold truncate">
-                {employee?.primaryWorkCategoryId?.name || "Staff"}
-              </span>
-            </div>
-          </div>
+    <div className="flex h-screen bg-sky-50 overflow-hidden text-slate-800">
+      {/* ================= SIDEBAR ================= */}
+      <aside
+        className={cn(
+          "relative flex flex-col bg-white border-r border-sky-100 shadow-sm transition-all duration-300 shrink-0",
+          expanded ? "w-72" : "w-20"
+        )}
+      >
+        {/* LOGO */}
+        <div className="h-20 flex items-center justify-center border-b border-sky-100 shrink-0">
+          <img
+            src="/LOGO_COPY.png"
+            alt="Logo"
+            className={cn(
+              "object-contain transition-all",
+              expanded ? "h-12 w-auto" : "h-10 w-10"
+            )}
+          />
         </div>
 
+        {/* TOGGLE */}
         <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-red-50 hover:text-red-500 text-slate-400 transition"
+          onClick={() => setExpanded(!expanded)}
+          className="absolute -right-3 top-24 h-7 w-7 rounded-full bg-sky-500 text-white shadow-md flex items-center justify-center hover:scale-105 transition"
         >
-          <X size={18} />
+          <ChevronRight
+            size={14}
+            className={cn(expanded && "rotate-180 transition")}
+          />
         </button>
-      </header>
 
-      {/* BODY */}
-      <main className="flex-1 grid grid-cols-12 overflow-hidden">
-        {/* LEFT SIDE FIXED */}
-        <aside className="col-span-12 lg:col-span-4 xl:col-span-3 bg-white border-r border-slate-200 h-full p-5 flex flex-col justify-between overflow-hidden">
-          {/* TOP */}
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-900">
-                Personnel Details
-              </h3>
+        {/* NAV */}
+        <nav className="flex-1 px-3 py-4 overflow-hidden">
+          <div className="space-y-4">
+            {navGroups.map((group, idx) => (
+              <div key={idx}>
+                {expanded && (
+                  <p className="px-3 mb-2 text-[10px] uppercase font-bold tracking-widest text-sky-400">
+                    {group.group}
+                  </p>
+                )}
 
-              {canEdit && !editingInfo && (
+                <div className="space-y-1">
+                  {group.items
+                    .filter((item) => item.roles.includes(user.role))
+                    .map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.path);
+
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          title={!expanded ? item.label : ""}
+                          className={cn(
+                            "h-11 rounded-xl flex items-center transition-all",
+                            expanded ? "px-3" : "justify-center",
+                            active
+                              ? "bg-sky-500 text-white shadow-md"
+                              : "text-slate-500 hover:bg-sky-50 hover:text-sky-600"
+                          )}
+                        >
+                          <Icon size={18} />
+
+                          {expanded && (
+                            <span className="ml-3 text-sm font-medium truncate">
+                              {item.label}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </nav>
+
+        {/* FOOTER */}
+        <div className="p-3 border-t border-sky-100">
+          <button
+            onClick={logout}
+            className="w-full h-11 rounded-xl flex items-center gap-3 px-3 text-rose-500 hover:bg-rose-50 transition"
+          >
+            <LogOut size={18} />
+            {expanded && <span className="text-sm font-medium">Logout</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* ================= CONTENT ================= */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* HEADER */}
+        <header className="h-20 bg-white border-b border-sky-100 px-8 flex items-center justify-between shrink-0">
+          {/* LEFT SECTION */}
+          <div className="flex items-center gap-5 w-full max-w-3xl">
+            {/* LOGO LEFT OF SEARCH */}
+            <img
+              src="/LOGO_COPY.png"
+              alt="Logo"
+              className="h-11 object-contain"
+            />
+
+            {/* SEARCH */}
+            <div
+              className="relative flex-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-400"
+              />
+
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setShowSearchBox(true);
+                }}
+                onFocus={() => setShowSearchBox(true)}
+                type="text"
+                placeholder="Search employees..."
+                className="w-full h-11 rounded-2xl bg-sky-50 border border-sky-100 pl-12 pr-16 text-sm outline-none focus:ring-2 focus:ring-sky-300"
+              />
+
+              {search && (
                 <button
-                  onClick={() => setEditingInfo(true)}
-                  className="p-1.5 rounded-md text-indigo-500 hover:bg-indigo-50 transition"
+                  onClick={() => {
+                    setSearch("");
+                    setShowSearchBox(false);
+                  }}
+                  className="absolute right-12 top-1/2 -translate-y-1/2 text-slate-400"
                 >
-                  <Edit3 size={14} />
+                  <X size={15} />
                 </button>
+              )}
+
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-1 rounded border bg-white text-slate-400">
+                <Command size={10} className="inline mr-1" />K
+              </kbd>
+
+              {/* RESULTS */}
+              {showSearchBox && search && (
+                <div className="absolute top-14 left-0 w-full bg-white rounded-2xl border border-sky-100 shadow-xl z-50 overflow-hidden">
+                  {filteredEmployees.length > 0 ? (
+                    filteredEmployees.map((emp) => (
+                      <button
+                        key={emp.id}
+                        onClick={() => {
+                          navigate("/resources/portfolio");
+                          setSearch(emp.name);
+                          setShowSearchBox(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-sky-50 border-b last:border-none"
+                      >
+                        <p className="font-medium">{emp.name}</p>
+                        <p className="text-xs text-slate-400">{emp.role}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-4 text-sm text-slate-400">
+                      No employee found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div className="flex items-center gap-3">
+            {/* Notifications */}
+            <div
+              className="relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setShowProfileMenu(false);
+                }}
+                className="h-11 w-11 rounded-2xl bg-white border border-sky-100 flex items-center justify-center hover:bg-sky-50"
+              >
+                <Bell size={18} />
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl border border-sky-100 shadow-xl z-50">
+                  <div className="p-4 border-b font-semibold">
+                    Notifications
+                  </div>
+                  <div className="p-4 text-sm text-slate-400">
+                    No new alerts.
+                  </div>
+                </div>
               )}
             </div>
 
-            {!editingInfo ? (
-              <div className="space-y-4">
-                <Row
-                  icon={<Calendar size={14} />}
-                  label="Join Date"
-                  value={
-                    employee?.joiningDate
-                      ? new Date(employee.joiningDate).toLocaleDateString()
-                      : "—"
-                  }
-                />
-
-                <Row
-                  icon={<Briefcase size={14} />}
-                  label="Experience"
-                  value={experience}
-                />
-
-                <Row
-                  icon={<MapPin size={14} />}
-                  label="Work Hub"
-                  value={employee?.location || "Remote"}
-                />
-
-                <Row
-                  icon={<DollarSign size={14} />}
-                  label="Rate/Hr"
-                  value={`₹${employee?.hourlyCost?.toLocaleString("en-IN") || 0}`}
-                />
-
-                <Row
-                  icon={<Mail size={14} />}
-                  label="Email"
-                  value={employee?.email || "—"}
-                />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <Input
-                  label="Joining Date"
-                  type="date"
-                  value={editForm.joiningDate}
-                  onChange={(e: any) =>
-                    setEditForm({
-                      ...editForm,
-                      joiningDate: e.target.value,
-                    })
-                  }
-                />
-
-                <Input
-                  label="Location"
-                  value={editForm.location}
-                  onChange={(e: any) =>
-                    setEditForm({
-                      ...editForm,
-                      location: e.target.value,
-                    })
-                  }
-                />
-
-                <Input
-                  label="Hourly Cost"
-                  type="number"
-                  value={editForm.hourlyCost}
-                  onChange={(e: any) =>
-                    setEditForm({
-                      ...editForm,
-                      hourlyCost: e.target.value,
-                    })
-                  }
-                />
-
-                <div className="flex gap-2 pt-2">
-                  <IconButton
-                    icon={<X size={14} />}
-                    onClick={() => setEditingInfo(false)}
-                    color="text-slate-600 hover:bg-slate-100"
-                  />
-
-                  <button
-                    onClick={saveEmployeeInfo}
-                    className="flex-1 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    <Save size={14} />
-                    {savingInfo ? "Saving..." : "Save"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* BOTTOM */}
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-900 mb-4">
-              Resource Load
-            </h3>
-
-            <div className="flex justify-between items-end mb-4">
-              <div>
-                <span className="text-4xl font-black text-slate-900">
-                  {bookedHours}h
-                </span>
-
-                <span className="text-slate-600 ml-1 text-2xl">/ {CAPACITY}h</span>
-              </div>
-
-              <span
-                className={`text-lg font-bold ${getUtilColor(
-                  utilizationPct
-                )}`}
-              >
-                {utilizationPct}%
-              </span>
-            </div>
-
-            <div className="h-2 rounded-full bg-slate-200 overflow-hidden mb-4">
-              <div
-                className={`h-full ${
-                  utilizationPct > 100
-                    ? "bg-green-500"
-                    : utilizationPct > 80
-                    ? "bg-green-500"
-                    : "bg-indigo-600"
-                }`}
-                style={{
-                  width: `${Math.min(utilizationPct, 100)}%`,
+            {/* Profile */}
+            <div
+              className="relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  setShowProfileMenu(!showProfileMenu);
+                  setShowNotifications(false);
                 }}
-              />
-            </div>
+                className="flex items-center gap-3 px-2 py-1.5 rounded-2xl bg-sky-500 text-white"
+              >
+                <div className="h-9 w-9 rounded-xl bg-white text-sky-600 flex items-center justify-center font-bold">
+                  {user.email.charAt(0).toUpperCase()}
+                </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <p className="text-sky-800 uppercase font-bold">
-                  Status
-                </p>
+                <div className="hidden lg:block text-left">
+                  <p className="text-[10px] uppercase font-bold">
+                    {user.role}
+                  </p>
+                  <p className="text-xs font-semibold">
+                    {user.email.split("@")[0]}
+                  </p>
+                </div>
+              </button>
 
-                <p
-                  className={`font-bold ${
-                    utilizationPct > 100
-                      ? "text-red-600"
-                      : utilizationPct > 80
-                      ? "text-green-700"
-                      : "text-orange-600"
-                  }`}
-                >
-                  {utilizationPct > 100
-                    ? "Overloaded"
-                    : utilizationPct > 80
-                    ? "Optimal"
-                    : "Available"}
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="text-sky-800 uppercase font-bold">
-                  Free Space
-                </p>
-
-                <p className="font-bold text-orange-400">
-                  {remainingHours}h
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* RIGHT SIDE */}
-        <section className="col-span-12 lg:col-span-8 xl:col-span-9 p-6 overflow-y-auto">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <TrendingUp
-                size={17}
-                className="text-indigo-500"
-              />
-              Project Allocations
-            </h3>
-
-            <span className="text-xs font-semibold bg-white border border-slate-200 px-2 py-1 rounded-lg text-slate-500">
-              {allocations.length} Active
-            </span>
-          </div>
-
-          {allocations.length === 0 ? (
-            <div className="h-52 bg-white rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
-              <User size={32} className="mb-2 opacity-40" />
-              Currently on Bench
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
-              {allocations.map((a: any) => (
-                <div
-                  key={a._id}
-                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition group"
-                >
-                  <div className="flex justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase text-indigo-500 mb-1">
-                        Project
-                      </p>
-
-                      <h4 className="font-bold text-slate-900 truncate">
-                        {a?.projectId?.name || "Unnamed"}
-                      </h4>
-                    </div>
-
-                    <span
-                      className={`text-[10px] font-bold px-2 py-1 rounded-md shrink-0 ${
-                        a.isBillable
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {a.isBillable
-                        ? "Billable"
-                        : "Internal"}
-                    </span>
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl border border-sky-100 shadow-xl overflow-hidden z-50">
+                  <div className="p-4 border-b">
+                    <p className="font-semibold truncate">{user.email}</p>
+                    <p className="text-xs text-sky-600 mt-1 uppercase font-bold">
+                      {user.role}
+                    </p>
                   </div>
 
-                  <div className="flex items-center mt-4 pt-3 border-t border-slate-100">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-sky-700">
-                      <Clock size={12} />
-                      {a.allocatedHours}h
-                    </div>
+                  <div className="p-2">
+                    <Link
+                      to="/my-profile"
+                      className="h-11 rounded-xl px-4 flex items-center hover:bg-sky-50 text-sm"
+                    >
+                      My Profile
+                    </Link>
 
-                    {canEdit && (
-                      <div className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                        <IconButton
-                          icon={<Edit3 size={13} />}
-                          onClick={() => {
-                            setActiveAllocation(a);
-                            setAllocationMode("edit");
-                          }}
-                          color="text-indigo-600 hover:bg-indigo-50"
-                        />
-
-                        <IconButton
-                          icon={<ArrowRightLeft size={13} />}
-                          onClick={() => {
-                            setActiveAllocation(a);
-                            setAllocationMode("move");
-                          }}
-                          color="text-sky-600 hover:bg-sky-50"
-                        />
-                      </div>
-                    )}
+                    <button
+                      onClick={logout}
+                      className="w-full h-11 rounded-xl px-4 text-left hover:bg-rose-50 text-rose-600 text-sm"
+                    >
+                      Logout
+                    </button>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </section>
-      </main>
+          </div>
+        </header>
 
-      {/* MODAL */}
-      {allocationMode && activeAllocation && (
-        <AllocateModal
-          mode={allocationMode}
-          allocation={activeAllocation}
-          projects={projects}
-          workCategories={workCategories}
-          onClose={() => {
-            setAllocationMode(null);
-            setActiveAllocation(null);
-          }}
-          onSuccess={() => {
-            refetchEmployees();
-            setAllocationMode(null);
-            setActiveAllocation(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-/* COMPONENTS */
-
-function Row({ icon, label, value }: any) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2 text-slate-500 text-xs">
-        {icon}
-        {label}
+        {/* PAGE */}
+        <main className="flex-1 overflow-y-auto p-8 bg-sky-50">
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
+        </main>
       </div>
 
-      <span className="text-xs font-bold text-slate-800 text-right">
-        {value}
-      </span>
+      <Chatbot />
     </div>
   );
 }
-
-function Input({ label, ...props }: any) {
-  return (
-    <div>
-      <label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">
-        {label}
-      </label>
-
-      <input
-        {...props}
-        className="w-full h-9 px-3 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-      />
-    </div>
-  );
-}
-
-function IconButton({
-  icon,
-  onClick,
-  color,
-}: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-8 h-8 rounded-md flex items-center justify-center transition ${color}`}
-    >
-      {icon}
-    </button>
-  );
-}
-
-

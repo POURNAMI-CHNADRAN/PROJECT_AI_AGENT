@@ -3,6 +3,11 @@ import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema(
   {
+    name: {
+    type: String,
+    required: true,
+    },
+    
     email: {
       type: String,
       required: true,
@@ -21,18 +26,39 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    // ✅ LINK TO EMPLOYEE (OPTIONAL)
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
       default: null,
+      validate: {
+        validator: function (value) {
+          return this.role !== "Employee" || value != null;
+        },
+        message: "Employee Role must have EmployeeId"
+      }
     },
 
     status: {
       type: String,
       enum: ["Active", "Inactive"],
-      default: "Active",
+      default: "Inactive",
     },
+
+    // 🔐 INVITE FLOW FIELDS (NEW)
+    inviteToken: {
+      type: String,
+      default: null,
+    },
+
+    inviteExpires: {
+      type: Date,
+      default: null,
+    },
+
+    isFirstLogin: {
+      type: Boolean,
+      default: true,
+    }
   },
   { timestamps: true }
 );
@@ -40,14 +66,19 @@ const userSchema = new mongoose.Schema(
 // Hash password
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
+  if (!this.password) return;
+
   this.password = await bcrypt.hash(this.password, 10);
 });
 
-// Hide password
-userSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-  delete obj.password;
-  return obj;
-};
+userSchema.set("toJSON", {
+  transform: function (doc, ret) {
+    delete ret.password;
+    delete ret.inviteToken;
+    delete ret.inviteExpires;
+    return ret;
+  }
+});
+
 
 export default mongoose.model("User", userSchema);

@@ -1,56 +1,31 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./authContext";
 
-export default function RoleRoute({
-  allowedRoles,
-  children,
-}: {
+type Props = {
   allowedRoles: string[];
-  children?: React.ReactNode;
-}) {
+};
+
+export default function RoleRoute({ allowedRoles }: Props) {
   const { user, loading } = useAuth();
 
-  // ✅ wait for auth hydration
-  if (loading) return null;
+  // 🔄 Loading state
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center text-slate-500">
+        Restoring session...
+      </div>
+    );
+  }
 
-  // ✅ not logged in
+  // 🚫 Not logged in
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ logged in but role not allowed
+  // 🚫 Role check
   if (!allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return children ? <>{children}</> : <Outlet />;
+  return <Outlet />;
 }
-
-// export default function RoleRoute({
-//   allowedRoles,
-//   children,
-// }: {
-//   allowedRoles: string[];
-//   children: JSX.Element;
-// }) {
-//   const { user, loading } = useAuth();
-
-//   /** ✅ WAIT FOR AUTH HYDRATION */
-//   if (loading) {
-//     return (
-//       <div className="p-6 text-sky-600">
-//         Restoring Session...
-//       </div>
-//     );
-//   }
-
-//   if (!user) {
-//     return <Navigate to="/login" replace />;
-//   }
-
-//   if (!allowedRoles.includes(user.role)) {
-//     return <Navigate to="/unauthorized" replace />;
-//   }
-
-//   return children;
-// }

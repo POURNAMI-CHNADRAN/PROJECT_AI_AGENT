@@ -9,25 +9,23 @@ import {
 
 import {
   protect,
-  employeeOnly,
-  adminOrHROnly
 } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Employee submits
-router.post("/submit", protect, employeeOnly, submitTimesheet);
+router.post("/submit", protect, submitTimesheet);
 
 // Finance / Admin approves
-router.put("/approve/:id", protect, adminOrHROnly, approveTimesheet);
+router.put("/approve/:id", protect, approveTimesheet);
 
 // Finance / Admin rejects
-router.put("/reject/:id", protect, adminOrHROnly, rejectTimesheet);
+router.put("/reject/:id", protect, rejectTimesheet);
 
 // Employee gets their own timesheets — REQUIRED for MyProfile.tsx
 router.get("/employee/:id", protect, getTimesheetsByEmployee);
 
 // Finance/Admin history
-router.get("/", protect, adminOrHROnly, getTimesheetHistory);
+router.get("/", protect, getTimesheetHistory);
 
 export default router;

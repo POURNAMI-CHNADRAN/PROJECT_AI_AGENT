@@ -1,201 +1,252 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Users, DollarSign, TrendingUp, Clock, 
-  ChevronRight, Sparkles, AlertCircle, FileText 
+  Users, DollarSign, TrendingUp, Clock, Sparkles, 
+  Calendar, Download, ArrowUpRight, ArrowDownRight,
+  Filter, LayoutDashboard, Briefcase, Zap
 } from "lucide-react";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, 
+  LineChart, Line 
+} from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge"; // Assuming shadcn/ui or similar
+import { Badge } from "../components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { useAnalytics } from "../../hooks/useAnalytics";
 
-export default function Dashboard() {
-  const navigate = useNavigate();
-  const today = new Date();
-  const month = today.getMonth() + 1;
-  const year = today.getFullYear();
+const COLORS = ['#0EA5E9', '#F43F5E', '#10B981', '#F59E0B', '#6366F1'];
 
-  const { loading, utilization = [], bench = [], revenue = [], suggestions = [] } = useAnalytics(month, year);
+export default function PremiumDashboard() {
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear] = useState(new Date().getFullYear());
+  
+  const { loading, utilization = [], bench = [], revenue = [], suggestions = [] } = 
+    useAnalytics(selectedMonth, selectedYear);
 
-  if (loading) return <DashboardSkeleton />;
+  // --- Calculations ---
+  const stats = useMemo(() => {
+    const total = utilization.length;
+    const billable = utilization.filter((e: any) => e.utilization > 0).length;
+    const rev = revenue.reduce((s: number, r: any) => s + (r.revenue || 0), 0);
+    const util = total > 0 ? Math.round(utilization.reduce((s, e) => s + e.utilization, 0) / total) : 0;
+    
+    return { total, billable, nonBillable: total - billable, revenue: rev, util };
+  }, [utilization, revenue]);
 
-  // Aggregated Metrics
-  const employeeCount = utilization.length;
-  const totalRevenue = revenue.reduce((s: number, r: any) => s + (r.revenue || 0), 0);
-  const avgUtilization = employeeCount > 0 
-    ? Math.round(utilization.reduce((s: number, e: any) => s + (e.utilization || 0), 0) / employeeCount) 
-    : 0;
+  if (loading) return <PremiumSkeleton />;
 
   return (
-    <div className="min-h-screen bg-[#F4F7FA] p-8 space-y-8">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 p-6 lg:p-10 font-sans">
       
-      {/* 1. TOP NAV / BREADCRUMB HEADER */}
-      <header className="flex justify-between items-end">
+      {/* --- PREMIUM TOP NAVIGATION --- */}
+      <nav className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
         <div>
-          <div className="flex items-center gap-2 text-sky-600 text-xs font-bold uppercase tracking-widest mb-1">
-            <Sparkles size={14} />
-            Intelligence Engine
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-2 w-8 bg-sky-500 rounded-full" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-sky-600">Executive Insight</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Workforce Command <span className="text-slate-400 font-light">/ {today.toLocaleString('default', { month: 'long' })}</span>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900">
+            Workforce <span className="text-sky-600">OS</span>
           </h1>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="bg-white border-slate-200 shadow-sm">
-            <FileText className="mr-2 h-4 w-4 text-slate-400" /> Export PDF
-          </Button>
-          <Button className="bg-sky-600 hover:bg-sky-700 shadow-lg shadow-sky-200 transition-all" onClick={() => navigate("/resources/portfolio")}>
-            Manage Allocations
-          </Button>
-        </div>
-      </header>
 
-      {/* 2. KPI STRIP (Interactive) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <KPICard label="Avg Utilization" value={`${avgUtilization}%`} trend="+2.4%" icon={TrendingUp} variant={avgUtilization > 80 ? 'success' : 'warning'} />
-        <KPICard label="Projected Revenue" value={`₹${(totalRevenue/100000).toFixed(1)}L`} trend="+12%" icon={DollarSign} variant="primary" />
-        <KPICard label="Idle Capacity" value={`${bench.reduce((s, b) => s + b.benchHours, 0)}h`} trend="High Risk" icon={Clock} variant="danger" />
-        <KPICard label="Active Talent" value={employeeCount} trend="Active" icon={Users} variant="neutral" />
+        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
+          <Calendar className="ml-2 text-slate-400" size={18} />
+          <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+            <SelectTrigger className="w-[140px] border-none font-bold text-slate-700 focus:ring-0">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-100">
+              {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                .map((m, i) => <SelectItem key={m} value={(i + 1).toString()}>{m}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="h-8 w-[1px] bg-slate-100 mx-1" />
+          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-50"><Download size={18}/></Button>
+        </div>
+      </nav>
+
+      {/* --- 1. KEY METRICS: THE POWER STRIP --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+        <MetricCard label="Total Headcount" value={stats.total} trend="+4" icon={<Users />} color="blue" />
+        <MetricCard label="Billable Talent" value={stats.billable} trend="82%" icon={<Zap />} color="emerald" />
+        <MetricCard label="Strategic Bench" value={stats.nonBillable} trend="-2" icon={<Clock />} color="rose" />
+        <MetricCard label="Utilization Rate" value={`${stats.util}%`} trend="+2.4%" icon={<TrendingUp />} color="violet" />
+        <MetricCard label="Revenue Forecast" value={`₹${(stats.revenue/100000).toFixed(1)}L`} trend="+12%" icon={<DollarSign />} color="amber" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* 3. MAIN RESOURCE LIST (Action-Oriented) */}
-        <Card className="lg:col-span-8 border-none shadow-sm rounded-3xl overflow-hidden">
-          <CardHeader className="bg-white px-8 pt-8 pb-4">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-bold">Resource Allocation & Health</CardTitle>
-              <Button variant="ghost" size="sm" className="text-sky-600 font-bold text-xs">VIEW ALL</Button>
-            </div>
-          </CardHeader>
-          <CardContent className="bg-white px-8 pb-8">
-            <div className="space-y-1">
-              {utilization.slice(0, 6).map((emp: any) => (
-                <div key={emp.employeeId} className="group flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs">
-                      {emp.name.split(' ').map((n:any) => n[0]).join('')}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{emp.name}</p>
-                      <p className="text-[11px] text-slate-400 uppercase font-semibold">{emp.role}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-8">
-                    <div className="hidden md:block w-32">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1">
-                        <span>LOAD</span>
-                        <span>{emp.utilization}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }} 
-                          animate={{ width: `${emp.utilization}%` }} 
-                          className={`h-full rounded-full ${emp.utilization > 100 ? 'bg-red-500' : 'bg-sky-500'}`} 
-                        />
-                      </div>
-                    </div>
-                    <ChevronRight size={18} className="text-slate-300 group-hover:text-sky-500 transition-colors" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* --- 2. THE VISUALIZATION ENGINE --- */}
+        <div className="lg:col-span-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            {/* Billable vs Non-Billable */}
+            <ChartWrapper title="Revenue Composition" subtitle="Billable vs Support Roles">
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={[{name: 'Billable', value: stats.billable}, {name: 'Non-Billable', value: stats.nonBillable}]} 
+                         innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value">
+                      <Cell fill="#0EA5E9" />
+                      <Cell fill="#E2E8F0" />
+                    </Pie>
+                    <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartWrapper>
 
-        {/* 4. AI & BENCH SIDEBAR */}
-        <div className="lg:col-span-4 space-y-6">
+            {/* Project Allocation */}
+            <ChartWrapper title="Project Allocation" subtitle="Resource density per account">
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenue.slice(0, 5)} layout="vertical" margin={{ left: -20 }}>
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="projectName" type="category" axisLine={false} tickLine={false} fontSize={11} width={100} />
+                    <Tooltip cursor={{fill: '#F8FAFC'}} />
+                    <Bar dataKey="revenue" fill="#6366F1" radius={[0, 10, 10, 0]} barSize={12} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartWrapper>
+          </div>
+
+          {/* Revenue by Project Line Chart */}
+          <ChartWrapper title="Performance Forecast" subtitle="Projected revenue growth by portfolio">
+            <div className="h-[350px] w-full pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenue}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                  <XAxis dataKey="projectName" axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#94A3B8'}} />
+                  <YAxis axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#94A3B8'}} />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="revenue" stroke="#0EA5E9" strokeWidth={3} fill="url(#colorRev)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartWrapper>
+        </div>
+
+        {/* --- 3. SIDEBAR: BENCH & AI --- */}
+        <div className="lg:col-span-4 space-y-8">
           
-          {/* AI SUGGESTIONS */}
-          <Card className="rounded-3xl bg-slate-900 border-none text-white overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Sparkles size={80} />
+          {/* AI Optimizer Card */}
+          <Card className="bg-slate-900 border-none rounded-[2rem] overflow-hidden relative shadow-2xl">
+            <div className="absolute top-0 right-0 p-8 opacity-20 text-sky-400 animate-pulse">
+              <Sparkles size={100} />
             </div>
-            <CardContent className="p-6 relative z-10 space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-sky-500 hover:bg-sky-500 text-white border-none px-2 py-0 text-[10px]">AI ENGINE</Badge>
-                <h3 className="font-bold">Optimization Tips</h3>
+            <CardContent className="p-8 relative z-10">
+              <Badge className="bg-sky-500/20 text-sky-400 border-sky-500/30 mb-4 px-3 py-1">AI STRATEGIST</Badge>
+              <h3 className="text-xl font-bold text-white mb-6">Efficiency Levers</h3>
+              <div className="space-y-4 mb-8">
+                {suggestions.map((s: any, i: number) => (
+                  <div key={i} className="flex gap-3 text-sm text-slate-300 border-l-2 border-sky-500/50 pl-4 py-1">
+                    {s.message}
+                  </div>
+                ))}
               </div>
-              
-              <div className="space-y-3">
-                <AnimatePresence>
-                  {suggestions.map((s: any, i: number) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-3 bg-white/10 rounded-xl border border-white/5 text-xs leading-relaxed">
-                      {s.message}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-
-              <Button className="w-full bg-white text-slate-900 font-bold hover:bg-slate-100 transition-all py-6 rounded-xl shadow-xl">
-                Apply Smart Rebalancing
+              <Button className="w-full bg-white text-slate-900 font-black hover:bg-sky-50 py-7 rounded-2xl">
+                RUN OPTIMIZATION
               </Button>
             </CardContent>
           </Card>
 
-          {/* BENCH RISK */}
-          <Card className="rounded-3xl border-none shadow-sm bg-white">
-            <CardHeader className="p-6 pb-2">
-              <div className="flex items-center gap-2 text-red-500 font-bold text-xs uppercase tracking-tighter">
-                <AlertCircle size={14} /> Critical Bench Risk
+          {/* Bench Forecast Section */}
+          <Card className="border-none shadow-xl shadow-slate-200/60 rounded-[2rem] bg-white">
+            <CardHeader className="p-8 pb-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-black">Bench Risk</CardTitle>
+                <Badge variant="outline" className="border-rose-100 text-rose-500 bg-rose-50 font-bold">CRITICAL</Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-6 pt-0 space-y-4">
-               {bench.slice(0,3).map((b: any) => (
-                 <div key={b.employeeId} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-none">
-                    <span className="text-sm font-medium text-slate-700">{b.name}</span>
-                    <Badge variant="outline" className="text-red-500 border-red-100 bg-red-50 text-[10px]">
-                      {b.benchHours}h Idle
-                    </Badge>
-                 </div>
-               ))}
+            <CardContent className="p-8 pt-6">
+              <div className="space-y-6">
+                {bench.slice(0, 4).map((b: any) => (
+                  <div key={b.employeeId} className="flex items-center justify-between group cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:bg-rose-50 group-hover:text-rose-500 transition-colors">
+                        {b.name.charAt(0)}
+                      </div>
+                      <span className="font-bold text-slate-700 text-sm">{b.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-black text-rose-500">{b.benchHours}h</div>
+                      <div className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Availability</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
+
       </div>
     </div>
   );
 }
 
-// Sub-component for KPI Cards
-function KPICard({ label, value, trend, icon: Icon, variant }: any) {
-  const styles: any = {
-    primary: "text-sky-600 bg-sky-50",
-    success: "text-emerald-600 bg-emerald-50",
-    warning: "text-amber-600 bg-amber-50",
-    danger: "text-red-600 bg-red-50",
-    neutral: "text-slate-600 bg-slate-50",
+// --- PREMIUM SUB-COMPONENTS ---
+
+function MetricCard({ label, value, trend, icon, color }: any) {
+  const colorMap: any = {
+    blue: "text-sky-600 bg-sky-50",
+    emerald: "text-emerald-600 bg-emerald-50",
+    rose: "text-rose-600 bg-rose-50",
+    violet: "text-indigo-600 bg-indigo-50",
+    amber: "text-amber-600 bg-amber-50"
   };
 
   return (
-    <Card className="border-none shadow-sm rounded-3xl overflow-hidden hover:shadow-md transition-shadow cursor-default">
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-2xl ${styles[variant]}`}>
-            <Icon size={20} />
-          </div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-1 rounded-md">{trend}</span>
+    <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white relative overflow-hidden group">
+      <div className="flex justify-between items-start mb-6">
+        <div className={`p-3 rounded-2xl ${colorMap[color]} transition-transform group-hover:scale-110`}>
+          {React.cloneElement(icon, { size: 24 })}
         </div>
-        <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-          <h2 className="text-2xl font-black text-slate-800">{value}</h2>
+        <div className="flex items-center text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
+          <ArrowUpRight size={12} className="mr-1" /> {trend}
         </div>
+      </div>
+      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+      <h2 className="text-3xl font-black text-slate-900">{value}</h2>
+    </motion.div>
+  );
+}
+
+function ChartWrapper({ title, subtitle, children }: any) {
+  return (
+    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-white overflow-hidden">
+      <CardHeader className="p-8 pb-0">
+        <CardTitle className="text-xl font-black text-slate-900">{title}</CardTitle>
+        <p className="text-sm text-slate-400 font-medium">{subtitle}</p>
+      </CardHeader>
+      <CardContent className="p-8">
+        {children}
       </CardContent>
     </Card>
   );
 }
 
-function DashboardSkeleton() {
+function PremiumSkeleton() {
   return (
-    <div className="h-screen bg-slate-50 p-8 flex flex-col gap-8 animate-pulse">
-      <div className="h-12 w-1/3 bg-slate-200 rounded-xl" />
-      <div className="grid grid-cols-4 gap-6">
-        {[1,2,3,4].map(i => <div key={i} className="h-32 bg-slate-200 rounded-3xl" />)}
+    <div className="p-10 animate-pulse bg-slate-50 min-h-screen">
+      <div className="h-10 w-48 bg-slate-200 rounded-full mb-10" />
+      <div className="grid grid-cols-5 gap-6 mb-10">
+        {[1,2,3,4,5].map(i => <div key={i} className="h-32 bg-slate-200 rounded-[2rem]" />)}
       </div>
-      <div className="flex-1 bg-white rounded-3xl shadow-sm" />
+      <div className="grid grid-cols-12 gap-8">
+        <div className="col-span-8 h-96 bg-white rounded-[2.5rem]" />
+        <div className="col-span-4 h-96 bg-slate-900 rounded-[2.5rem]" />
+      </div>
     </div>
   );
 }

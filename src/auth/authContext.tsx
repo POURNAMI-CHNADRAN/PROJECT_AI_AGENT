@@ -25,17 +25,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
   // ✅ RESTORE SESSION ON REFRESH
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    const savedToken = localStorage.getItem("token");
+useEffect(() => {
+  const initAuth = async () => {
+    const token = localStorage.getItem("token");
 
-    if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
-      setToken(savedToken);
+    if (!token) {
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
-  }, []);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error();
+
+      const userData = await res.json();
+
+      setUser(userData);
+      setToken(token);
+    } catch {
+      localStorage.clear();
+      setUser(null);
+      setToken(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  initAuth();
+}, []);
 
   // ✅ LOGIN
   const login = async (email: string, password: string) => {

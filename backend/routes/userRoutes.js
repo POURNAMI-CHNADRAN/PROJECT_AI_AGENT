@@ -6,11 +6,16 @@ import {
   deleteUser,
 } from "../controllers/userController.js";
 
+import { inviteUser } from "../controllers/inviteController.js";
+
 const router = express.Router();
 
 router.get("/", getUsers);
 router.post("/", createUser);
 router.patch("/:id", updateUser);
 router.delete("/:id", deleteUser);
+
+// INVITE FLOW
+router.post("/invite", inviteUser);
 
 export default router;

@@ -8,17 +8,17 @@ import {
   remove,
 } from "../controllers/storyController.js";
 
-import { protect, adminOrHROnly, employeeOnly, allowRoles } from "../middleware/authMiddleware.js";
+import { protect, authorize} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Admin + Finance
-router.post("/", protect, adminOrHROnly, create);
+router.post("/", protect, create);
 
-router.get("/", protect, allowRoles("Admin", "Finance", "Employee"), getAll);
+router.get("/", protect, authorize("Admin", "Finance", "Employee"), getAll);
 
 // Employee — assigned stories only
-router.get("/assigned", protect, employeeOnly, getAssignedStories);
+router.get("/assigned", protect, getAssignedStories);
 
 // ANY role can view one story (controller restricts employees)
 router.get("/:id", protect, getOne);

@@ -1,1140 +1,316 @@
-// import React, { useEffect, useState } from "react";
-// import {
-//   User,
-//   Mail,
-//   Briefcase,
-//   MapPin,
-//   Calendar,
-//   IndianRupee,
-//   Layers,
-//   FileText,
-//   FolderKanban,
-//   Clock,
-//   Upload,
-//   ActivitySquare,
-//   DollarSign,
-//   Sparkles,
-// } from "lucide-react";
-// import { useDropzone } from "react-dropzone";
-
-// /* ============================================================================
-//    MyProfile.tsx — Fully Fixed & Cleaned
-// ============================================================================ */
-
-// export default function MyProfile() {
-//   const API_BASE = import.meta.env.VITE_API_BASE_URL;
-//   const token = localStorage.getItem("token") || "";
-
-//   const [profile, setProfile] = useState<any | null>(null);
-//   const [employeeSkills, setEmployeeSkills] = useState<any[]>([]);
-//   const [employeeAllocations, setEmployeeAllocations] = useState<any[]>([]);
-//   const [timesheets, setTimesheets] = useState<any[]>([]);
-//   const [documents, setDocuments] = useState<any[]>([]);
-//   const [payroll, setPayroll] = useState<any | null>(null);
-//   const [projects, setProjects] = useState<any[]>([]);
-
-//   const [activeTab, setActiveTab] = useState("profile");
-//   const [loading, setLoading] = useState(true);
-
-//   /* ============================================================================
-//      Avatar Upload (Preview Only)
-//   ============================================================================ */
-
-//   const onDrop = (acceptedFiles: File[]) => {
-//     const file = acceptedFiles[0];
-//     if (file) {
-//       const url = URL.createObjectURL(file);
-//       setProfile((p: any) => ({ ...p, avatarPreview: url }));
-//     }
-//   };
-//   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
-
-//   /* ============================================================================
-//      API LOADERS
-//   ============================================================================ */
-
-//   const loadEmployeeSkills = async (empId: string) => {
-//     try {
-//       const res = await fetch(`${API_BASE}/api/employee-skills/${empId}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       const data = await res.json();
-//       setEmployeeSkills(data.data || []);
-//     } catch (err) {
-//       console.error("Skill Load Error", err);
-//     }
-//   };
-
-//   const loadEmployeeAllocations = async (empId: string) => {
-//     try {
-//       const res = await fetch(`${API_BASE}/api/allocations?employeeId=${empId}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       const data = await res.json();
-//       setEmployeeAllocations(data.data || []);
-//     } catch (err) {
-//       console.error("Allocation Load Error", err);
-//     }
-//   };
-
-//   /* ============================================================================
-//      ⭐ FIXED PROJECT LOADER — now supports employee filtering correctly
-//   ============================================================================ */
-
-//   const loadProjects = async (empId: string, role: string) => {
-//     const res = await fetch(`${API_BASE}/api/projects`, {
-//       headers: { Authorization: `Bearer ${token}` },
-//     });
-//     const json = await res.json();
-
-//     let list: any[] = [];
-
-//     if (json.data && !Array.isArray(json.data)) list = [json.data];
-//     else if (Array.isArray(json.data)) list = json.data;
-
-//     if (role === "Employee") {
-//       setProjects(list.filter((p: any) => p.assignedTo === empId));
-//     } else {
-//       setProjects(list);
-//     }
-//   };
-
-//   const loadTimesheets = async (empId: string) => {
-//     try {
-//       const res = await fetch(`${API_BASE}/api/timesheets/employee/${empId}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       const data = await res.json();
-//       setTimesheets(data.data || []);
-//     } catch (err) {
-//       console.error("Timesheet Load Error", err);
-//     }
-//   };
-
-//   const loadPayroll = async (empId: string) => {
-//     try {
-//       const res = await fetch(`${API_BASE}/api/payroll/${empId}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       const data = await res.json();
-//       setPayroll(data.data || null);
-//     } catch (err) {
-//       console.error("Payroll Load Error", err);
-//     }
-//   };
-
-//   const loadDocuments = async (empId: string) => {
-//     try {
-//       const res = await fetch(`${API_BASE}/api/documents/${empId}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       const data = await res.json();
-//       setDocuments(data.data || []);
-//     } catch (err) {
-//       console.error("Documents Load Error", err);
-//     }
-//   };
-
-//   /* ============================================================================
-//      LOAD PROFILE → THEN loadProjects() & other modules
-//   ============================================================================ */
-
-//   useEffect(() => {
-//     (async () => {
-//       try {
-//         const res = await fetch(`${API_BASE}/api/employees/me`, {
-//           headers: { Authorization: `Bearer ${token}` },
-//         });
-//         const data = await res.json();
-//         setProfile(data.data || null);
-
-//         if (data?.data?._id) {
-//           const empId = data.data._id;
-//           const role = data.data.role;
-
-//           // ⭐ Must load here because profile is now available
-//           loadProjects(empId, role);
-
-//           loadEmployeeSkills(empId);
-//           loadEmployeeAllocations(empId);
-//           loadTimesheets(empId);
-//           loadPayroll(empId);
-//           loadDocuments(empId);
-//         }
-//       } catch (err) {
-//         console.error("Profile Load Error", err);
-//       } finally {
-//         setLoading(false);
-//       }
-//     })();
-//   }, []);
-
-//   /* ============================================================================
-//      UI DISPLAYS BELOW
-//   ============================================================================ */
-
-//   const formattedDate =
-//     profile?.joiningDate &&
-//     new Date(profile.joiningDate).toLocaleDateString("en-IN", {
-//       day: "2-digit",
-//       month: "short",
-//       year: "numeric",
-//     });
-
-//   if (loading)
-//     return (
-//       <div className="p-6 text-sky-700 text-lg animate-fade-in">
-//         Loading Profile...
-//       </div>
-//     );
-
-//   if (!profile)
-//     return (
-//       <div className="p-6 text-red-500 text-lg font-semibold animate-fade-in">
-//         Profile not Found.
-//       </div>
-//     );
-
-//   return (
-//     <div className="p-6 space-y-10 bg-sky-50">
-
-//       {/* HEADER */}
-//       <div className="bg-sky-200 p-8 rounded-xl shadow-lg flex items-center gap-6">
-
-//         {/* Avatar */}
-//         <div
-//           className="w-28 h-28 rounded-full bg-white shadow-xl border border-sky-200 flex items-center justify-center overflow-hidden relative group cursor-pointer"
-//         >
-//           {profile.avatarPreview ? (
-//             <img src={profile.avatarPreview} className="w-full h-full object-cover" />
-//           ) : (
-//             <User size={54} className="text-sky-900" />
-//           )}
-//         </div>
-
-//         <div>
-//           <h1 className="text-3xl font-bold text-sky-900">{profile.name}</h1>
-//           <p className="text-sky-700">{profile.email}</p>
-//         </div>
-
-//         <span
-//           className={`ml-auto px-4 py-1 rounded-full text-sm font-semibold ${
-//             profile.status === "Active"
-//               ? "bg-green-100 text-green-700"
-//               : "bg-red-100 text-red-700"
-//           }`}
-//         >
-//           {profile.status}
-//         </span>
-//       </div>
-
-//       {/* TABS */}
-//       <div className="flex gap-6 border-b pb-3 font-medium">
-//         {[
-//           { id: "profile", label: "Profile" },
-//           { id: "job", label: "Job Details" },
-//           { id: "skills", label: "Skills" },
-//           { id: "projects", label: "Project Allocation" },
-//           { id: "attendance", label: "Timesheets" },
-//           { id: "payroll", label: "Payroll" },
-//           { id: "documents", label: "Documents" },
-//         ].map((tab) => (
-//           <button
-//             key={tab.id}
-//             className={`pb-2 ${
-//               activeTab === tab.id
-//                 ? "border-b-2 border-sky-600 text-sky-700 font-semibold"
-//                 : "text-sky-700 hover:text-sky-900"
-//             }`}
-//             onClick={() => setActiveTab(tab.id)}
-//           >
-//             {tab.label}
-//           </button>
-//         ))}
-//       </div>
-
-//       {/* TABS CONTENT */}
-//       <div>
-
-//         {/* PROFILE TAB */}
-//         {activeTab === "profile" && (
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-//             <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200">
-//               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-sky-900">
-//                 <User size={20} /> Personal Information
-//               </h3>
-
-//               <div className="space-y-4">
-//                 <div className="flex gap-3"><Mail size={18} /> <strong>{profile.email}</strong></div>
-//                 <div className="flex gap-3"><MapPin size={18} /> {profile.location}</div>
-//                 <div className="flex gap-3"><Calendar size={18} /> Joined: <strong>{formattedDate}</strong></div>
-//                 <div className="flex gap-3"><Layers size={18} /> Department: <strong>{profile.departmentId?.name}</strong></div>
-//               </div>
-//             </div>
-
-//             <div className="bg-white p-6 rounded-xl shadow-md border border-sky-200">
-//               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-sky-900">
-//                 <Briefcase size={20} /> Employment Summary
-//               </h3>
-
-//               <div className="space-y-4">
-//                 <div className="flex gap-3"><Briefcase size={18} /> Role: <strong>{profile.role}</strong></div>
-//                 <div className="flex gap-3">
-//                   <IndianRupee size={18} /> Monthly Cost: ₹{profile.costPerMonth?.toLocaleString()}
-//                 </div>
-//                 <div className="flex gap-3"><ActivitySquare size={18} /> Employee ID: <strong>{profile.employeeId}</strong></div>
-//               </div>
-//             </div>
-
-//           </div>
-//         )}
-
-//         {/* SKILLS */}
-//         {activeTab === "skills" && (
-//           <div className="bg-white p-8 rounded-2xl shadow-xl border border-sky-200">
-//             <h3 className="text-2xl font-bold mb-6 flex items-center gap-3 text-sky-900">
-//               <Sparkles className="w-6 h-6 text-sky-700" /> Skills & Expertise
-//             </h3>
-
-//             {employeeSkills.length === 0 ? (
-//               <p>No skills assigned.</p>
-//             ) : (
-//               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-//                 {employeeSkills.map((item) => (
-//                   <div key={item._id} className="bg-sky-50 p-6 rounded-xl border border-sky-200">
-//                     <div className="flex justify-between mb-4">
-//                       <span className="text-xl font-semibold text-sky-900">
-//                         {item.skillId?.name}
-//                       </span>
-//                       <span className="text-xs px-3 py-1 rounded-full bg-sky-600 text-white">
-//                         Level {item.proficiency}
-//                       </span>
-//                     </div>
-
-//                     <div className="w-full bg-sky-200 h-3 rounded-full overflow-hidden">
-//                       <div
-//                         className="h-full bg-sky-600"
-//                         style={{ width: `${(item.proficiency / 5) * 100}%` }}
-//                       />
-//                     </div>
-//                     <p className="mt-3 text-sm">Category: {item.skillId?.category}</p>
-//                   </div>
-//                 ))}
-//               </div>
-//             )}
-//           </div>
-//         )}
-
-//         {/* PROJECT ALLOCATION */}
-//         {activeTab === "projects" && (
-//           <div className="bg-white p-8 rounded-xl shadow-xl border border-sky-200">
-//             <h3 className="text-2xl font-semibold flex items-center gap-3 text-sky-900 mb-6">
-//               <FolderKanban className="w-6 h-6" /> Project Allocation Overview
-//             </h3>
-
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//               {employeeAllocations.map((item) => (
-//                 <div key={item._id} className="bg-sky-50 p-6 rounded-xl border border-sky-200">
-//                   <h4 className="text-lg font-semibold">{item.project?.name}</h4>
-
-//                   <span className="text-xs px-3 py-1 rounded-full bg-sky-600 text-white">
-//                     {item.allocation}%
-//                   </span>
-
-//                   <div className="w-full bg-sky-200 h-3 rounded-full mt-2">
-//                     <div
-//                       className="h-full bg-sky-600"
-//                       style={{ width: `${item.allocation}%` }}
-//                     />
-//                   </div>
-
-//                   <p className="mt-3 text-sm text-sky-800">Workload Allocation</p>
-//                 </div>
-//               ))}
-//             </div>
-//           </div>
-//         )}
-
-//         {/* TIMESHEETS */}
-//         {activeTab === "attendance" && (
-//           <div className="space-y-6">
-//             <h3 className="text-2xl font-semibold mb-4 flex items-center gap-3 text-sky-900">
-//               <Clock className="w-6 h-6" /> Timesheet Summary
-//             </h3>
-
-//             {timesheets.length === 0 && <p>No timesheet entries found.</p>}
-
-//             {timesheets.length > 0 && (
-//               <div className="space-y-6">
-//                 {timesheets.map((entry) => (
-//                   <div
-//                     key={entry._id}
-//                     className="bg-white border border-sky-200 rounded-2xl shadow-md p-6 hover:shadow-xl transition-all"
-//                   >
-//                     <div className="flex justify-between items-center mb-4">
-//                       <div className="flex items-center gap-3">
-//                         <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-sky-100">
-//                           <Clock className="text-sky-700 w-5 h-5" />
-//                         </div>
-//                         <h3 className="text-lg font-semibold text-sky-900">
-//                           {entry.project_id?.name}
-//                         </h3>
-//                       </div>
-
-//                       <span
-//                         className={`px-4 py-1 text-xs rounded-full font-semibold ${
-//                           entry.status === "Approved"
-//                             ? "bg-green-100 text-green-800"
-//                             : entry.status === "Rejected"
-//                             ? "bg-red-100 text-red-700"
-//                             : "bg-yellow-100 text-yellow-700"
-//                         }`}
-//                       >
-//                         {entry.status}
-//                       </span>
-//                     </div>
-
-//                     <div className="bg-sky-50 p-4 rounded-xl border border-sky-200 mb-4">
-//                       <p className="text-sm text-sky-700 font-medium">Story</p>
-//                       <p className="font-semibold text-sky-900 text-lg mt-1">
-//                         {entry.story_id?.title}
-//                       </p>
-//                       <p className="text-xs text-sky-600 mt-2">
-//                         {entry.story_id?.story_points} Story Points
-//                       </p>
-//                     </div>
-
-//                     <div className="flex justify-between items-center">
-//                       <div className="flex items-center gap-2 text-sky-700">
-//                         <Calendar className="w-4 h-4" />
-//                         <span className="text-sm font-medium">
-//                           {entry.work_date?.split("T")[0]}
-//                         </span>
-//                       </div>
-
-//                       <div className="flex items-center gap-2 text-sky-900 font-semibold">
-//                         <Layers className="w-4 h-4 text-sky-700" />
-//                         {entry.story_points_completed} pts
-//                       </div>
-//                     </div>
-//                   </div>
-//                 ))}
-//               </div>
-//             )}
-//           </div>
-//         )}
-
-//         {/* PAYROLL */}
-//         {activeTab === "payroll" && (
-//           <div className="bg-white p-8 rounded-xl border border-sky-200 shadow-xl">
-//             <h3 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-sky-900">
-//               <DollarSign className="text-sky-700" /> Payroll Summary
-//             </h3>
-
-//             {payroll ? (
-//               <div className="bg-sky-600 text-white p-6 rounded-xl shadow-md flex justify-between">
-//                 <div>
-//                   <p className="text-sm opacity-80">Monthly Compensation</p>
-//                   <p className="text-3xl font-bold mt-1">
-//                     ₹{payroll.monthlySalary?.toLocaleString()}
-//                   </p>
-//                 </div>
-//                 <DollarSign className="w-10 h-10 opacity-40" />
-//               </div>
-//             ) : (
-//               <p>No payroll data available.</p>
-//             )}
-//           </div>
-//         )}
-
-//         {/* DOCUMENTS */}
-//         {activeTab === "documents" && (
-//           <div className="bg-white p-6 rounded-xl border border-sky-200 shadow-xl">
-//             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-sky-900">
-//               <FileText size={20} /> Documents
-//             </h3>
-
-//             <div
-//               {...getRootProps()}
-//               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer ${
-//                 isDragActive ? "bg-sky-100 border-sky-400" : "bg-sky-50 border-sky-300"
-//               }`}
-//             >
-//               <input {...getInputProps()} />
-//               <Upload size={34} className="mx-auto mb-3 text-sky-700" />
-//               <p>Drag & drop documents here</p>
-//               <p className="text-sm">PDF, PNG, DOCX</p>
-//             </div>
-
-//             <div className="mt-6 space-y-3">
-//               {documents.length === 0 ? (
-//                 <p>No documents uploaded.</p>
-//               ) : (
-//                 documents.map((d) => (
-//                   <a
-//                     key={d._id}
-//                     href={d.fileUrl}
-//                     target="_blank"
-//                     className="block bg-sky-50 px-4 py-2 rounded-lg border border-sky-200"
-//                   >
-//                     {d.name}
-//                   </a>
-//                 ))
-//               )}
-//             </div>
-//           </div>
-//         )}
-
-//       </div>
-//     </div>
-//   );
-// }
-
-
-// // import React, { useEffect, useState } from "react";
-// // import {
-// //   User,
-// //   Mail,
-// //   Briefcase,
-// //   MapPin,
-// //   Calendar,
-// //   IndianRupee,
-// //   Layers,
-// //   FileText,
-// //   FolderKanban,
-// //   Clock,
-// //   Upload,
-// //   ActivitySquare,
-// //   DollarSign,
-// //   Sparkles,
-// // } from "lucide-react";
-// // import { useDropzone } from "react-dropzone";
-
-// // export default function MyProfile() {
-// //   const API_BASE = import.meta.env.VITE_API_BASE_URL;
-// //   const token = localStorage.getItem("token") || "";
-
-// //   const [profile, setProfile] = useState<any | null>(null);
-// //   const [employeeSkills, setEmployeeSkills] = useState<any[]>([]);
-// //   const [employeeAllocations, setEmployeeAllocations] = useState<any[]>([]);
-// //   const [timesheets, setTimesheets] = useState<any[]>([]);
-// //   const [documents, setDocuments] = useState<any[]>([]);
-// //   const [payroll, setPayroll] = useState<any | null>(null);
-// //   const [projects, setProjects] = useState<any[]>([]);
-
-// //   const [activeTab, setActiveTab] = useState("profile");
-// //   const [loading, setLoading] = useState(true);
-
-// //   /* ================= AVATAR PREVIEW ================= */
-
-// //   const onDrop = (files: File[]) => {
-// //     const file = files[0];
-// //     if (file) {
-// //       const url = URL.createObjectURL(file);
-// //       setProfile((p: any) => ({ ...p, avatarPreview: url }));
-// //     }
-// //   };
-
-// //   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
-
-// //   /* ================= LOADERS ================= */
-
-// //   const loadEmployeeSkills = async (empId: string) => {
-// //     const res = await fetch(`${API_BASE}/api/employee-skills/${empId}`, {
-// //       headers: { Authorization: `Bearer ${token}` },
-// //     });
-// //     const data = await res.json();
-// //     setEmployeeSkills(data.data || []);
-// //   };
-
-// //   const loadEmployeeAllocations = async (empId: string) => {
-// //     const res = await fetch(`${API_BASE}/api/allocations?employeeId=${empId}`, {
-// //       headers: { Authorization: `Bearer ${token}` },
-// //     });
-// //     const data = await res.json();
-// //     setEmployeeAllocations(data.data || []);
-// //   };
-
-// //   const loadProjects = async (empId: string, role: string) => {
-// //     const res = await fetch(`${API_BASE}/api/projects`, {
-// //       headers: { Authorization: `Bearer ${token}` },
-// //     });
-// //     const json = await res.json();
-
-// //     const list = Array.isArray(json.data) ? json.data : [];
-// //     setProjects(role === "Employee" ? list.filter((p) => p.assignedTo === empId) : list);
-// //   };
-
-// //   const loadTimesheets = async (empId: string) => {
-// //     const res = await fetch(`${API_BASE}/api/timesheets/employee/${empId}`, {
-// //       headers: { Authorization: `Bearer ${token}` },
-// //     });
-// //     const data = await res.json();
-// //     setTimesheets(data.data || []);
-// //   };
-
-// //   const loadPayroll = async (empId: string) => {
-// //     const res = await fetch(`${API_BASE}/api/payroll/${empId}`, {
-// //       headers: { Authorization: `Bearer ${token}` },
-// //     });
-// //     const data = await res.json();
-// //     setPayroll(data.data || null);
-// //   };
-
-// //   const loadDocuments = async (empId: string) => {
-// //     const res = await fetch(`${API_BASE}/api/documents/${empId}`, {
-// //       headers: { Authorization: `Bearer ${token}` },
-// //     });
-// //     const data = await res.json();
-// //     setDocuments(data.data || []);
-// //   };
-
-// //   /* ================= PROFILE LOAD (✅ FIXED) ================= */
-
-// //   useEffect(() => {
-// //     (async () => {
-// //       try {
-// //         const res = await fetch(`${API_BASE}/api/employees/me`, {
-// //           headers: { Authorization: `Bearer ${token}` },
-// //         });
-
-// //         if (!res.ok) {
-// //           setProfile(null);
-// //           return;
-// //         }
-
-// //         // ✅ BACKEND RETURNS EMPLOYEE OBJECT DIRECTLY
-// //         const data = await res.json();
-// //         setProfile(data ?? null);
-
-// //         if (data?._id) {
-// //           const empId = data._id;
-// //           const role = data.role;
-
-// //           loadProjects(empId, role);
-// //           loadEmployeeSkills(empId);
-// //           loadEmployeeAllocations(empId);
-// //           loadTimesheets(empId);
-// //           loadPayroll(empId);
-// //           loadDocuments(empId);
-// //         }
-// //       } catch (err) {
-// //         console.error("Profile Load Error", err);
-// //         setProfile(null);
-// //       } finally {
-// //         setLoading(false);
-// //       }
-// //     })();
-// //   }, []);
-
-// //   /* ================= FORMATTING ================= */
-
-// //   const formattedDate =
-// //     profile?.joiningDate &&
-// //     new Date(profile.joiningDate).toLocaleDateString("en-IN", {
-// //       day: "2-digit",
-// //       month: "short",
-// //       year: "numeric",
-// //     });
-
-// //   if (loading) return <div className="p-6 text-sky-700 text-lg">Loading Profile…</div>;
-
-// //   if (!profile)
-// //     return (
-// //       <div className="p-6 text-red-500 text-lg font-semibold">
-// //         Profile not Found.
-// //       </div>
-// //     );
-
-// //   /* ================= UI ================= */
-
-// //   return (
-// //     <div className="space-y-10 max-w-7xl mx-auto p-6">
-
-// //       {/* HEADER */}
-// //       <div className="bg-sky-200 p-8 rounded-xl shadow flex items-center gap-6">
-// //         <div className="w-28 h-28 rounded-full bg-white shadow border flex items-center justify-center overflow-hidden">
-// //           {profile.avatarPreview ? (
-// //             <img src={profile.avatarPreview} className="w-full h-full object-cover" />
-// //           ) : (
-// //             <User size={54} className="text-sky-900" />
-// //           )}
-// //         </div>
-
-// //         <div>
-// //           <h1 className="text-3xl font-bold text-sky-900">{profile.name}</h1>
-// //           <p className="text-sky-700">{profile.email}</p>
-// //         </div>
-
-// //         <span
-// //           className={`ml-auto px-4 py-1 rounded-full text-sm font-semibold ${
-// //             profile.status === "Active"
-// //               ? "bg-green-100 text-green-700"
-// //               : "bg-red-100 text-red-700"
-// //           }`}
-// //         >
-// //           {profile.status}
-// //         </span>
-// //       </div>
-
-// //       {/* TABS */}
-// //       <div className="flex gap-6 border-b pb-3">
-// //         {[
-// //           ["profile", "Profile"],
-// //           ["skills", "Skills"],
-// //           ["projects", "Projects"],
-// //           ["attendance", "Timesheets"],
-// //           ["payroll", "Payroll"],
-// //           ["documents", "Documents"],
-// //         ].map(([id, label]) => (
-// //           <button
-// //             key={id}
-// //             onClick={() => setActiveTab(id)}
-// //             className={`pb-2 ${
-// //               activeTab === id
-// //                 ? "border-b-2 border-sky-600 text-sky-700 font-semibold"
-// //                 : "text-gray-500"
-// //             }`}
-// //           >
-// //             {label}
-// //           </button>
-// //         ))}
-// //       </div>
-
-// //       {/* PROFILE TAB */}
-// //       {activeTab === "profile" && (
-// //         <div className="grid md:grid-cols-2 gap-6">
-// //           <div className="bg-white p-6 rounded-xl shadow border">
-// //             <h3 className="font-semibold mb-4 flex gap-2">
-// //               <User size={18} /> Personal Info
-// //             </h3>
-// //             <div className="space-y-3 text-sm">
-// //               <p><Mail size={16} className="inline" /> {profile.email}</p>
-// //               <p><MapPin size={16} className="inline" /> {profile.location}</p>
-// //               <p><Calendar size={16} className="inline" /> Joined {formattedDate}</p>
-// //               <p>
-// //                 <Layers size={16} className="inline" /> Department{" "}
-// //                 {typeof profile.departmentId === "object"
-// //                   ? profile.departmentId.name
-// //                   : "—"}
-// //               </p>
-// //             </div>
-// //           </div>
-
-// //           <div className="bg-white p-6 rounded-xl shadow border">
-// //             <h3 className="font-semibold mb-4 flex gap-2">
-// //               <Briefcase size={18} /> Employment
-// //             </h3>
-// //             <div className="space-y-3 text-sm">
-// //               <p>Role: <strong>{profile.role}</strong></p>
-// //               <p>Employee ID: <strong>{profile.employeeId}</strong></p>
-// //               <p>Rate/Finance: ₹{profile.ratePerHour}</p>
-// //             </div>
-// //           </div>
-// //         </div>
-// //       )}
-
-// //       {/* SKILLS TAB */}
-// //       {activeTab === "skills" && (
-// //         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-// //           {employeeSkills.map((s) => (
-// //             <div key={s._id} className="bg-sky-50 p-6 rounded-xl border">
-// //               <div className="font-semibold">{s.skillId?.name}</div>
-// //               <div className="text-sm mt-1">Level {s.proficiency}</div>
-// //             </div>
-// //           ))}
-// //         </div>
-// //       )}
-
-// //       {/* DOCUMENT UPLOAD TAB */}
-// //       {activeTab === "documents" && (
-// //         <div
-// //           {...getRootProps()}
-// //           className={`border-2 border-dashed p-8 rounded-xl text-center ${
-// //             isDragActive ? "bg-sky-100" : "bg-sky-50"
-// //           }`}
-// //         >
-// //           <input {...getInputProps()} />
-// //           <Upload size={32} className="mx-auto mb-2 text-sky-700" />
-// //           Drop documents here
-// //         </div>
-// //       )}
-
-// //     </div>
-// //   );
-// // }
-
-import React, { useEffect, useState } from "react";
-import {
-  User,
-  Mail,
-  Briefcase,
-  MapPin,
-  Calendar,
-  IndianRupee,
-  Layers,
-  FileText,
-  FolderKanban,
-  Clock,
-  Upload,
-  ActivitySquare,
-  DollarSign,
-  Sparkles,
+import React, { useEffect, useMemo, useState } from "react";
+import { 
+  User, Mail, MapPin, Calendar, Upload, DollarSign, 
+  Briefcase, Award, FileText, ChevronRight, ExternalLink 
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
+import { motion, AnimatePresence } from "framer-motion";
 
-/* =============================================================================
-   MyProfile.tsx — Full Version with Project Allocation UI
-============================================================================= */
+type AnyObj = Record<string, any>;
 
 export default function MyProfile() {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
-  const token = localStorage.getItem("token") || "";
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  const [profile, setProfile] = useState<any | null>(null);
-  const [employeeSkills, setEmployeeSkills] = useState<any[]>([]);
-  const [employeeAllocations, setEmployeeAllocations] = useState<any[]>([]);
-  const [timesheets, setTimesheets] = useState<any[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [payroll, setPayroll] = useState<any | null>(null);
+  /* ===================================================
+      AUTH & STATE
+  =================================================== */
+  const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = localStorage.getItem("token") || savedUser?.token || "";
+
+  const [profile, setProfile] = useState<AnyObj | null>(null);
+  const [data, setData] = useState({
+    skills: [] as any[],
+    allocations: [] as any[],
+    timesheets: [] as any[],
+    documents: [] as any[],
+    payroll: null as any,
+  });
 
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  /* =============================================================================
-     Avatar Upload (Preview Only)
-  ============================================================================= */
+  const authHeaders = useMemo(() => ({
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  }), [token]);
 
-  const onDrop = (files: File[]) => {
-    const file = files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setProfile((p: any) => (p ? { ...p, avatarPreview: url } : p));
-    }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
-
-  /* =============================================================================
-     LOADERS
-  ============================================================================= */
-
-  const authHeaders = { Authorization: `Bearer ${token}` };
-
-  const loadEmployeeSkills = async (empId: string) => {
-    const res = await fetch(`${API_BASE}/api/employee-skills/${empId}`, {
-      headers: authHeaders,
-    });
-    const json = await res.json();
-    setEmployeeSkills(json.data || []);
-  };
-
-const loadEmployeeAllocations = async () => {
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/employees/me/allocations`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
+  /* ===================================================
+      HELPERS
+  =================================================== */
+  const fetcher = async (url: string) => {
+    const res = await fetch(url, { headers: authHeaders });
     if (!res.ok) {
-      throw new Error("Failed to load allocations");
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || "Request failed");
     }
-
-    const allocations = await res.json();
-    setEmployeeAllocations(
-      Array.isArray(allocations) ? allocations : []
-    );
-  } catch (err) {
-    console.error("Allocation Load Error:", err);
-    setEmployeeAllocations([]);
-  }
-};
-
-  const loadTimesheets = async (empId: string) => {
-    const res = await fetch(`${API_BASE}/api/timesheets/employee/${empId}`, {
-      headers: authHeaders,
-    });
     const json = await res.json();
-    setTimesheets(json.data || []);
+    return json?.data ?? json;
   };
 
-  const loadPayroll = async (empId: string) => {
-    const res = await fetch(`${API_BASE}/api/payroll/${empId}`, {
-      headers: authHeaders,
-    });
-    const json = await res.json();
-    setPayroll(json.data || null);
-  };
+  const isEmployee = useMemo(() => (
+    profile?.employeeCode || profile?.hourlyCost || profile?.joiningDate
+  ), [profile]);
 
-  const loadDocuments = async (empId: string) => {
-    const res = await fetch(`${API_BASE}/api/documents/${empId}`, {
-      headers: authHeaders,
-    });
-    const json = await res.json();
-    setDocuments(json.data || []);
-  };
-
-  /* =============================================================================
-     LOAD PROFILE (Backend returns employee object directly)
-  ============================================================================= */
-
+  /* ===================================================
+      LOADER LOGIC
+  =================================================== */
   useEffect(() => {
-    (async () => {
+    const init = async () => {
+      if (!token) { setError("Session expired. Please login again."); setLoading(false); return; }
       try {
-        const res = await fetch(`${API_BASE}/api/employees/me`, {
-          headers: authHeaders,
-        });
+        setLoading(true);
+        const me = await fetcher(`${API_BASE}/api/employees/me`);
+        setProfile(me);
 
-        if (!res.ok) {
-          setProfile(null);
-          return;
+        // Batch secondary requests
+        if (me?._id) {
+          const [skills, allocations, timesheets, payroll, docs] = await Promise.allSettled([
+            fetcher(`${API_BASE}/api/employee-skills/${me._id}`),
+            fetcher(`${API_BASE}/api/employees/me/allocations`),
+            fetcher(`${API_BASE}/api/timesheets/employee/${me._id}`),
+            fetcher(`${API_BASE}/api/payroll/${me._id}`),
+            fetcher(`${API_BASE}/api/documents/${me._id}`),
+          ]);
+
+          setData({
+            skills: skills.status === 'fulfilled' ? (Array.isArray(skills.value) ? skills.value : []) : [],
+            allocations: allocations.status === 'fulfilled' ? (Array.isArray(allocations.value) ? allocations.value : []) : [],
+            timesheets: timesheets.status === 'fulfilled' ? (Array.isArray(timesheets.value) ? timesheets.value : []) : [],
+            payroll: payroll.status === 'fulfilled' ? payroll.value : null,
+            documents: docs.status === 'fulfilled' ? (Array.isArray(docs.value) ? docs.value : []) : [],
+          });
         }
-
-        const data = await res.json();
-        setProfile(data);
-
-        if (data?._id) {
-          loadEmployeeSkills(data._id);
-          loadEmployeeAllocations();
-          loadTimesheets(data._id);
-          loadPayroll(data._id);
-          loadDocuments(data._id);
-        }
-      } catch (err) {
-        console.error("Profile Load Error", err);
-        setProfile(null);
+      } catch (err: any) {
+        setError(err.message);
       } finally {
         setLoading(false);
       }
-    })();
-  }, []);
+    };
+    init();
+  }, [token]);
 
-  /* =============================================================================
-     FORMATTERS
-  ============================================================================= */
+  /* ===================================================
+      RENDER HELPERS
+  =================================================== */
+  const tabs = [
+    { id: "profile", label: "Overview", icon: <User size={18}/> },
+    ...(isEmployee ? [
+      { id: "skills", label: "Skills", icon: <Award size={18}/> },
+      { id: "projects", label: "Projects", icon: <Briefcase size={18}/> },
+      { id: "attendance", label: "Timesheets", icon: <Calendar size={18}/> },
+      { id: "payroll", label: "Payroll", icon: <DollarSign size={18}/> },
+      { id: "documents", label: "Documents", icon: <FileText size={18}/> },
+    ] : []),
+  ];
 
-  const formattedDate =
-    profile?.joiningDate &&
-    new Date(profile.joiningDate).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen bg-slate-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+    </div>
+  );
 
-  if (loading) return <div className="p-6">Loading profile…</div>;
-  if (!profile) return <div className="p-6 text-red-500">Profile not Found.</div>;
-
-  /* =============================================================================
-     UI
-  ============================================================================= */
+  if (error) return (
+    <div className="p-8 text-center">
+      <div className="bg-red-50 text-red-600 p-4 rounded-lg inline-block">{error}</div>
+    </div>
+  );
 
   return (
-    <div className="p-6 space-y-10 bg-sky-50">
-
-      {/* ================= HEADER ================= */}
-      <div className="bg-sky-200 p-8 rounded-xl shadow flex items-center gap-6">
-        <div className="w-28 h-28 rounded-full bg-white shadow border flex items-center justify-center overflow-hidden">
-          {profile.avatarPreview ? (
-            <img src={profile.avatarPreview} className="w-full h-full object-cover" />
-          ) : (
-            <User size={52} className="text-sky-900" />
-          )}
-        </div>
-
-        <div>
-          <h1 className="text-3xl font-bold text-sky-900">{profile.name}</h1>
-          <p className="text-sky-700">{profile.email}</p>
-        </div>
-
-        <span
-          className={`ml-auto px-4 py-1 rounded-full font-semibold ${
-            profile.status === "Active"
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
-        >
-          {profile.status}
-        </span>
-      </div>
-
-      {/* ================= TABS ================= */}
-      <div className="flex gap-6 border-b pb-3 font-medium">
-        {[
-          { id: "profile", label: "Profile" },
-          { id: "skills", label: "Skills" },
-          { id: "projects", label: "Project Allocation" },
-          { id: "attendance", label: "Timesheets" },
-          { id: "payroll", label: "Payroll" },
-          { id: "documents", label: "Documents" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`pb-2 ${
-              activeTab === tab.id
-                ? "border-b-2 border-sky-600 text-sky-700 font-semibold"
-                : "text-gray-600 hover:text-sky-900"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ================= PROFILE TAB ================= */}
-      {activeTab === "profile" && (
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-xl shadow border">
-            <h3 className="flex items-center gap-2 font-semibold mb-4">
-              <User size={18} /> Personal Information
-            </h3>
-            <p><Mail size={16} className="inline" /> {profile.email}</p>
-            <p><MapPin size={16} className="inline" /> {profile.location}</p>
-            <p><Calendar size={16} className="inline" /> Joined {formattedDate}</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow border">
-            <h3 className="flex items-center gap-2 font-semibold mb-4">
-              <Briefcase size={18} /> Employment
-            </h3>
-            <p>Role: <strong>{profile.role}</strong></p>
-            <p>ID: <strong>{profile.employeeId}</strong></p>
-            <p>Rate / Finance: ₹{profile.ratePerHour}</p>
-          </div>
-        </div>
-      )}
-
-      {/* ================= SKILLS ================= */}
-      {activeTab === "skills" && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {employeeSkills.map((item) => (
-            <div key={item._id} className="bg-white p-6 rounded-xl shadow border">
-              <div className="font-semibold">{item.skillId?.name}</div>
-              <div className="text-sm mt-1">Level {item.proficiency}</div>
-              <div className="w-full bg-sky-100 h-2 rounded mt-3">
-                <div
-                  className="h-2 bg-sky-600 rounded"
-                  style={{ width: `${(item.proficiency / 5) * 100}%` }}
-                />
-              </div>
+    <div className="min-h-screen bg-[#F8FAFC] pb-12 font-sans text-slate-900">
+      {/* PREMIUM HEADER */}
+      <div className="h-48 bg-gradient-to-r from-blue-600 to-indigo-700 w-full relative">
+        <div className="max-w-6xl mx-auto px-6 relative h-full">
+          <div className="absolute -bottom-16 left-6 flex items-end gap-6">
+            <div className="w-32 h-32 rounded-3xl bg-white p-1 shadow-2xl ring-4 ring-white/20 overflow-hidden">
+              {profile?.avatarPreview ? (
+                <img src={profile.avatarPreview} className="w-full h-full object-cover rounded-[1.2rem]" alt="Profile" />
+              ) : (
+                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-blue-600">
+                  <User size={60} />
+                </div>
+              )}
             </div>
-          ))}
+            <div className="mb-2">
+              <h1 className="text-3xl font-bold text-amber-800 tracking-tight">{profile?.name}</h1>
+              <p className="text-amber-800 flex items-center gap-2">
+                <Briefcase size={16}/> {profile?.role || "Team Member"} • {profile?.employeeCode}
+              </p>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* ================= PROJECT ALLOCATION (PREVIOUS UI) ================= */}
-      {activeTab === "projects" && (
-        <div className="bg-white p-8 rounded-xl shadow border space-y-6">
-          <h3 className="text-2xl font-semibold flex items-center gap-3">
-            <FolderKanban className="w-6 h-6" />
-            Project Allocation Overview
-          </h3>
+      {/* MAIN CONTENT */}
+      <div className="max-w-6xl mx-auto px-6 mt-24 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* SIDEBAR NAVIGATION */}
+        <div className="lg:col-span-3">
+          <nav className="space-y-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                  activeTab === tab.id 
+                  ? "bg-white text-blue-600 shadow-sm font-semibold" 
+                  : "text-slate-500 hover:bg-slate-100"
+                }`}
+              >
+                <span className={`${activeTab === tab.id ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}`}>
+                  {tab.icon}
+                </span>
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {employeeAllocations.map((item) => {
-              const hours = item.fte || 0;
-              const percent = Math.min((hours / 160) * 100, 100);
-
-              return (
-                <div
-                  key={item._id}
-                  className="bg-sky-50 p-6 rounded-xl border hover:shadow-md transition"
-                >
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-lg font-semibold">
-                      {item.project?.name}
-                    </h4>
-
-                    <span className="text-xs px-3 py-1 rounded-full bg-sky-600 text-white">
-                      {hours}h
-                    </span>
+        {/* CONTENT AREA */}
+        <div className="lg:col-span-9">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* PROFILE TAB */}
+              {activeTab === "profile" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 className="text-lg font-bold mb-6 text-slate-800">Contact Details</h3>
+                    <div className="space-y-4">
+                      <DetailRow icon={<Mail size={18}/>} label="Email" value={profile?.email} />
+                      <DetailRow icon={<MapPin size={18}/>} label="Work Location" value={profile?.location} />
+                      <DetailRow icon={<Calendar size={18}/>} label="Joined Date" value={profile?.joiningDate} isDate />
+                    </div>
                   </div>
-
-                  <div className="w-full bg-sky-200 h-3 rounded-full">
-                    <div
-                      className="h-3 bg-sky-600 rounded"
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-
-                  <div className="flex justify-between text-sm mt-3 text-sky-800">
-                    <span className="flex items-center gap-1">
-                      <Clock size={14} />
-                      {Math.round(percent)}% Utilized
-                    </span>
-                    <span>
-                      {item.month}/{item.year}
-                    </span>
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 className="text-lg font-bold mb-6 text-slate-800">Professional Identity</h3>
+                    <div className="space-y-4">
+                      <DetailRow label="Employee ID" value={profile?.employeeCode} />
+                      <DetailRow label="Status" value={profile?.status || "Active"} isStatus />
+                      {isEmployee && <DetailRow label="Hourly Rate" value={`₹${profile?.hourlyCost}`} />}
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              )}
 
-      {/* ================= TIMESHEETS ================= */}
-      {activeTab === "attendance" && (
-        <div className="space-y-4">
-          {timesheets.map((t) => (
-            <div key={t._id} className="bg-white p-6 rounded-xl shadow border">
-              <p className="font-semibold">{t.project_id?.name}</p>
-              <p>Status: {t.status}</p>
-              <p>Date: {t.work_date?.split("T")[0]}</p>
-            </div>
-          ))}
-        </div>
-      )}
+              {/* SKILLS TAB */}
+              {activeTab === "skills" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {data.skills.map((item, i) => (
+                    <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                      <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Skill</span>
+                      <h4 className="text-lg font-bold text-slate-800 mb-3">{item.skillId?.name}</h4>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-blue-600 h-full rounded-full" style={{ width: `${(item.proficiency/5)*100}%` }} />
+                      </div>
+                      <span className="text-sm mt-2 text-slate-600 font-medium">Level {item.proficiency} / 5</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-      {/* ================= PAYROLL ================= */}
-      {activeTab === "payroll" && (
-        <div className="bg-white p-8 rounded-xl shadow border">
-          {payroll ? (
-            <div className="bg-sky-600 text-white p-6 rounded-xl flex justify-between">
-              <div>
-                <p className="text-sm">Monthly Salary</p>
-                <p className="text-3xl font-bold">
-                  ₹{payroll.monthlySalary?.toLocaleString()}
-                </p>
-              </div>
-              <DollarSign className="w-10 h-10 opacity-40" />
-            </div>
-          ) : (
-            <p>No payroll data available.</p>
-          )}
-        </div>
-      )}
+              {/* PAYROLL TAB */}
+              {activeTab === "payroll" && (
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
+                   <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                    <DollarSign size={200} />
+                  </div>
+                  <div className="relative">
+                    <h3 className="text-xl font-bold mb-6">Financial Overview</h3>
+                    {data.payroll ? (
+                      <div className="bg-slate-900 rounded-2xl p-8 text-white flex justify-between items-center">
+                        <div>
+                          <p className="text-slate-400 font-medium mb-1">Monthly Gross Salary</p>
+                          <h2 className="text-4xl font-black">₹{Number(data.payroll.monthlySalary).toLocaleString('en-IN')}</h2>
+                        </div>
+                        <div className="h-16 w-16 bg-white/10 rounded-2xl flex items-center justify-center">
+                          <DollarSign className="text-blue-400" size={32} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-slate-400">No payroll records found for the current period.</div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-      {/* ================= DOCUMENTS ================= */}
-      {activeTab === "documents" && (
-        <div className="bg-white p-6 rounded-xl shadow border">
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center ${
-              isDragActive ? "bg-sky-100" : "bg-sky-50"
-            }`}
-          >
-            <input {...getInputProps()} />
-            <Upload size={32} className="mx-auto mb-2 text-sky-700" />
-            Drag & drop documents here
-          </div>
+              {/* DOCUMENTS TAB */}
+              {activeTab === "documents" && (
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {data.documents.map((doc, i) => (
+                      <a key={i} href={doc.fileUrl} target="_blank" className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-blue-50 transition-colors group">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-lg shadow-sm text-blue-600">
+                            <FileText size={20}/>
+                          </div>
+                          <span className="font-semibold text-slate-700">{doc.name || "Untitled Document"}</span>
+                        </div>
+                        <ExternalLink size={16} className="text-slate-300 group-hover:text-blue-600 transition-colors"/>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          <div className="mt-4 space-y-2">
-            {documents.map((d) => (
-              <a
-                key={d._id}
-                href={d.fileUrl}
-                target="_blank"
-                className="block bg-sky-50 px-4 py-2 rounded border"
-              >
-                {d.name}
-              </a>
-            ))}
-          </div>
+              {/* TIMESHEET TAB */}
+              {activeTab === "attendance" && (
+                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Project</th>
+                          <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Date</th>
+                          <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {data.timesheets.map((ts, i) => (
+                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 font-semibold text-slate-700">{ts.project_id?.name || "General"}</td>
+                            <td className="px-6 py-4 text-slate-500">{ts.work_date?.split('T')[0]}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                ts.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {ts.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                 </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================
+    COMPONENTS
+=================================================== */
+function DetailRow({ icon, label, value, isDate, isStatus }: any) {
+  const displayValue = isDate && value ? new Date(value).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : (value || "-");
+  
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3 text-slate-500">
+        {icon && <span className="text-slate-400">{icon}</span>}
+        <span className="text-sm font-medium">{label}</span>
+      </div>
+      {isStatus ? (
+        <span className="bg-emerald-50 text-emerald-600 px-3 py-0.5 rounded-full text-xs font-bold ring-1 ring-emerald-100">{displayValue}</span>
+      ) : (
+        <span className="text-sm font-bold text-slate-700">{displayValue}</span>
       )}
     </div>
   );

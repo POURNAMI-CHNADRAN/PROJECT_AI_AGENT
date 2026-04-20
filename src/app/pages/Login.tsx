@@ -10,6 +10,8 @@ const ROTATING_TEXTS = [
   { prefix: "Allocation,", highlight: "Automated." },
 ];
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -29,21 +31,40 @@ export default function AuthPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const success = await login(email, password);
-      if (!success) throw new Error("Invalid credentials");
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      navigate(user.role === "Employee" ? "/my-profile" : "/dashboard", { replace: true });
-    } catch (err: any) {
-      setError(err.message || "Login Failed");
-    } finally {
-      setLoading(false);
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  setLoading(true);
+  setError("");
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Login Failed");
     }
-  };
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    navigate(
+      data.user.role === "Employee" ? "/my-profile" : "/dashboard",
+      { replace: true }
+    );
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="h-screen w-full flex overflow-hidden relative bg-white font-sans">

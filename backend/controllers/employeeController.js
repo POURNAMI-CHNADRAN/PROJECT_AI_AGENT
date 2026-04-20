@@ -1,4 +1,5 @@
 import Employee from "../models/Employee.js";
+import User from "../models/User.js";
 import { getNextEmployeeCode } from "../utils/Next.js";
 import Allocation from "../models/Allocation.js";
 import Project from "../models/Project.js";
@@ -199,6 +200,67 @@ export const deleteEmployee = async (req, res) => {
     res.json({
       success: true,
       message: "Employee Deleted Successfully"
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+// ---------------------------------------------------------------
+export const getMyProfile = async (req, res) => {
+  try {
+    const userId =
+      req.user?._id ||
+      req.user?.id ||
+      req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid Token Payload"
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User Not Found"
+      });
+    }
+
+    // linked employee profile
+    if (user.employeeId) {
+      const employee = await Employee.findById(user.employeeId)
+        .populate("primaryWorkCategoryId")
+        .populate("skills");
+
+      if (employee) {
+        return res.json({
+          success: true,
+          data: {
+            ...employee.toObject(),
+            role: user.role
+          }
+        });
+      }
+    }
+
+    // admin / finance / manager
+    return res.json({
+      success: true,
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      }
     });
 
   } catch (err) {
