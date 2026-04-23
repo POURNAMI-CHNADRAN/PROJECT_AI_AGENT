@@ -45,6 +45,12 @@ const employeeSchema = new mongoose.Schema(
       default: 0,
     },
 
+    monthlySalary: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
     status: {
       type: String,
       enum: ["Active", "Inactive"],
@@ -67,4 +73,22 @@ const employeeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+employeeSchema.pre("save", function () {
+  if (this.monthlySalary > 0) {
+    this.hourlyCost = Number((this.monthlySalary / 160).toFixed(2));
+  }
+});
+
+employeeSchema.pre("findOneAndUpdate", function () {
+  const update = this.getUpdate() || {};
+  const salary =
+    update.monthlySalary ??
+    update?.$set?.monthlySalary;
+
+  if (salary > 0) {
+    if (!update.$set) update.$set = {};
+    update.$set.hourlyCost = Number((salary / 160).toFixed(2));
+    this.setUpdate(update);
+  }
+});
 export default mongoose.model("Employee", employeeSchema);

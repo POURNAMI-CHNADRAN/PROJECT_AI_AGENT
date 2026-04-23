@@ -205,7 +205,13 @@ export default function Layout() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+  return (
+    <div className="h-screen flex items-center justify-center">
+      Loading User...
+    </div>
+  );
+}
 
   const navGroups = [
     {
@@ -289,7 +295,7 @@ export default function Layout() {
 
             <div className="space-y-1">
               {group.items
-                .filter((item) => item.roles.includes(user.role))
+                .filter((item) => item.roles.includes(user?.role || ""))
                 .map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.path);
@@ -409,11 +415,11 @@ export default function Layout() {
                 className="flex items-center gap-3 p-1 pr-3 rounded-full bg-slate-50 border border-slate-200 hover:border-sky-200 transition-all"
               >
                 <div className="h-8 w-8 rounded-full bg-sky-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                  {user.email.charAt(0).toUpperCase()}
+                  {user?.email?.charAt(0)?.toUpperCase() || "U"}
                 </div>
                 <div className="hidden lg:block text-left">
                   <p className="text-xs font-bold text-slate-800 leading-tight">
-                    {user.email.split("@")[0]}
+                    {user?.email?.split("@")[0] || "User"}
                   </p>
                   <p className="text-[10px] text-sky-600 font-bold uppercase tracking-tighter">
                     {user.role}
@@ -430,7 +436,7 @@ export default function Layout() {
                         </div>
                         <div className="overflow-hidden">
                             <p className="text-xs font-bold opacity-80 text-emerald-900 uppercase tracking-wider">Account</p>
-                            <p className="text-sm font-bold truncate text-emerald-900">{user.email}</p>
+                            <p className="text-sm font-bold truncate text-emerald-900">{user?.email || "No Email"}</p>
                         </div>
                     </div>
                     <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/20 text-[10px] font-bold uppercase">

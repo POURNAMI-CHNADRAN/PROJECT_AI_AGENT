@@ -23,7 +23,6 @@ import workcategoryRoutes from "./routes/workcategoryRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 
-
 dotenv.config();
 connectDB();
 

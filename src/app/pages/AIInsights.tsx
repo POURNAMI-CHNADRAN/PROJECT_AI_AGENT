@@ -1,436 +1,336 @@
-// import { Brain, Send, Sparkles } from "lucide-react";
-
-// const sampleQuestions = [
-//   "Which employees will become non-billable next month?",
-//   "What is the current resource utilization by department?",
-//   "Which projects have the highest revenue?",
-//   "Identify employees with underutilized capacity",
-//   "Predict bench resources for next quarter",
-// ];
-
-// const aiResponse = {
-//   question: "Which employees will become non-billable next month?",
-//   answer: "Based on current project allocations and end dates, the following employees are at risk of becoming non-billable in April 2026:",
-//   insights: [
-//     { employee: "Michael Chen", currentProject: "Data Analytics Dashboard", endDate: "2026-03-31", allocation: "80%", recommendation: "Allocate to new project or internal training" },
-//     { employee: "Emily Davis", currentProject: "Mobile App Redesign", endDate: "2026-05-15", allocation: "100%", recommendation: "Consider for Cloud Migration shadow allocation" },
-//   ]
-// };
-
-// export default function AIInsights() {
-//   return (
-//     <div className="space-y-6">
-//       <div className="flex items-center gap-3">
-//         <Brain className="w-8 h-8 text-neutral-700" />
-//         <h1 className="text-neutral-800">AI Insights</h1>
-//       </div>
-
-//       {/* AI Query Box */}
-//       <div className="bg-white border-2 border-neutral-300 p-6 rounded">
-//         <h2 className="text-neutral-800 mb-4">Ask AI Assistant</h2>
-//         <div className="flex gap-3 mb-4">
-//           <input
-//             type="text"
-//             placeholder="Ask a question about resource utilization, billing, or forecasting..."
-//             className="flex-1 px-4 py-3 border-2 border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-400"
-//           />
-//           <button className="flex items-center gap-2 px-6 py-3 bg-neutral-800 text-white rounded text-sm hover:bg-neutral-700 transition-colors">
-//             <Send className="w-4 h-4" />
-//             Ask AI
-//           </button>
-//         </div>
-
-//         {/* Sample Questions */}
-//         <div>
-//           <p className="text-sm text-neutral-600 mb-3">Sample questions:</p>
-//           <div className="space-y-2">
-//             {sampleQuestions.map((question) => (
-//               <button
-//                 key={question}
-//                 className="block w-full text-left px-4 py-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded text-sm text-neutral-700 transition-colors"
-//               >
-//                 {question}
-//               </button>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* AI Response Card */}
-//       <div className="bg-white border-2 border-neutral-300 rounded overflow-hidden">
-//         <div className="px-6 py-4 bg-neutral-100 border-b-2 border-neutral-300 flex items-center gap-2">
-//           <Sparkles className="w-5 h-5 text-neutral-600" />
-//           <h2 className="text-neutral-800">AI Response</h2>
-//         </div>
-
-//         <div className="p-6">
-//           <div className="mb-4 pb-4 border-b border-neutral-200">
-//             <p className="text-sm text-neutral-600 mb-2">Question:</p>
-//             <p className="text-neutral-800">{aiResponse.question}</p>
-//           </div>
-
-//           <div className="mb-4">
-//             <p className="text-sm text-neutral-600 mb-2">Answer:</p>
-//             <p className="text-neutral-800">{aiResponse.answer}</p>
-//           </div>
-
-//           {/* Insights Table */}
-//           <div className="border-2 border-neutral-300 rounded overflow-hidden">
-//             <table className="w-full">
-//               <thead>
-//                 <tr className="bg-neutral-100 border-b-2 border-neutral-300">
-//                   <th className="text-left px-4 py-3 text-sm text-neutral-700">Employee</th>
-//                   <th className="text-left px-4 py-3 text-sm text-neutral-700">Current Project</th>
-//                   <th className="text-left px-4 py-3 text-sm text-neutral-700">End Date</th>
-//                   <th className="text-left px-4 py-3 text-sm text-neutral-700">Allocation</th>
-//                   <th className="text-left px-4 py-3 text-sm text-neutral-700">Recommendation</th>
-//                 </tr>
-//               </thead>
-//               <tbody>
-//                 {aiResponse.insights.map((insight, index) => (
-//                   <tr key={index} className="border-b border-neutral-200">
-//                     <td className="px-4 py-3 text-sm text-neutral-800">{insight.employee}</td>
-//                     <td className="px-4 py-3 text-sm text-neutral-600">{insight.currentProject}</td>
-//                     <td className="px-4 py-3 text-sm text-neutral-600">{insight.endDate}</td>
-//                     <td className="px-4 py-3 text-sm text-neutral-600">{insight.allocation}</td>
-//                     <td className="px-4 py-3 text-sm text-neutral-600">{insight.recommendation}</td>
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Additional Insights */}
-//       <div className="grid grid-cols-3 gap-4">
-//         <div className="bg-white border-2 border-neutral-300 p-6 rounded">
-//           <div className="flex items-center gap-2 mb-3">
-//             <Sparkles className="w-5 h-5 text-neutral-400" />
-//             <h3 className="text-sm text-neutral-700">Utilization Trend</h3>
-//           </div>
-//           <p className="text-2xl text-neutral-800 mb-1">↑ 5%</p>
-//           <p className="text-sm text-neutral-600">from last month</p>
-//         </div>
-
-//         <div className="bg-white border-2 border-neutral-300 p-6 rounded">
-//           <div className="flex items-center gap-2 mb-3">
-//             <Sparkles className="w-5 h-5 text-neutral-400" />
-//             <h3 className="text-sm text-neutral-700">Bench Forecast</h3>
-//           </div>
-//           <p className="text-2xl text-neutral-800 mb-1">12 employees</p>
-//           <p className="text-sm text-neutral-600">predicted for April</p>
-//         </div>
-
-//         <div className="bg-white border-2 border-neutral-300 p-6 rounded">
-//           <div className="flex items-center gap-2 mb-3">
-//             <Sparkles className="w-5 h-5 text-neutral-400" />
-//             <h3 className="text-sm text-neutral-700">Top Performer</h3>
-//           </div>
-//           <p className="text-2xl text-neutral-800 mb-1">Engineering</p>
-//           <p className="text-sm text-neutral-600">highest utilization</p>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// import { useState } from "react";
-// import axios from "axios";
-// import { Send } from "lucide-react";
-
-// export default function AIInsights() {
-//   const [question, setQuestion] = useState("");
-//   const [response, setResponse] = useState<any>(null);
-//   const [loading, setLoading] = useState(false);
-
-//   const askAI = async () => {
-//     try {
-//       setLoading(true);
-
-//       const res = await axios.post(
-//         "http://localhost:5000/api/ai/ask",
-//         { question }
-//       );
-
-//       setResponse(res.data);
-//     } catch (err) {
-//       console.error(err);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="bg-sky-50 min-h-screen p-6 space-y-6">
-
-//       <h1 className="text-2xl font-bold text-sky-900">
-//         AI Insights (Enterprise)
-//       </h1>
-
-//       {/* INPUT */}
-//       <div className="bg-white p-6 rounded-xl shadow">
-//         <div className="flex gap-3">
-//           <input
-//             value={question}
-//             onChange={(e) => setQuestion(e.target.value)}
-//             className="flex-1 p-3 border rounded"
-//             placeholder="Ask AI..."
-//           />
-//           <button
-//             onClick={askAI}
-//             className="bg-sky-600 text-white px-4 py-2 rounded flex gap-2"
-//           >
-//             <Send className="w-4 h-4" />
-//             Ask
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* RESPONSE */}
-//       {loading ? (
-//         <p>Thinking...</p>
-//       ) : response && (
-//         <div className="bg-white p-6 rounded-xl shadow">
-//           <h2 className="font-semibold mb-2">Answer</h2>
-//           <p className="mb-4">{response.answer}</p>
-
-//           {response.insights.length > 0 && (
-//             <table className="w-full border">
-//               <thead className="bg-sky-100">
-//                 <tr>
-//                   {Object.keys(response.insights[0]).map((key) => (
-//                     <th key={key} className="p-2 text-left">
-//                       {key}
-//                     </th>
-//                   ))}
-//                 </tr>
-//               </thead>
-
-//               <tbody>
-//                 {response.insights.map((row: any, i: number) => (
-//                   <tr key={i} className="border-b">
-//                     {Object.values(row).map((val: any, j) => (
-//                       <td key={j} className="p-2">
-//                         {val}
-//                       </td>
-//                     ))}
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-//           )}
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { Brain, Send, Sparkles } from "lucide-react";
+import {
+  Brain,
+  Send,
+  Sparkles,
+  Loader2,
+  TrendingUp,
+  Users,
+  Briefcase,
+  AlertCircle,
+  Database,
+} from "lucide-react";
 
-/* ================= SAMPLE QUESTIONS ================= */
-
-const sampleQuestions = [
-  "Which employees will become non-billable next month?",
-  "What is the current resource utilization?",
-  "Which projects have the highest revenue?",
-  "Identify employees with underutilized capacity",
-  "Who is on bench?",
+const suggestedQueries = [
+  "Show underutilized employees below 50%",
+  "Who is currently on bench?",
+  "Which project has highest resource allocation?",
+  "Show revenue summary this month"
 ];
 
-/* ================= COMPONENT ================= */
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+type InsightRow = Record<string, any>;
+type AIResponse = {
+  query: string;
+  answer: string;
+  source?: string;
+  insights: InsightRow[];
+};
+
+type DashboardSummary = {
+  totalEmployees: number;
+  billableEmployees: number;
+  benchCount: number;
+  averageUtilizationPct: number;
+  revenueForecast: number;
+};
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 export default function AIInsights() {
   const [question, setQuestion] = useState("");
-  const [response, setResponse] = useState<any>(null);
+  const [response, setResponse] = useState<AIResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [kpi, setKpi] = useState<DashboardSummary | null>(null);
+  const [kpiLoading, setKpiLoading] = useState(false);
 
-  /* ================= ASK AI ================= */
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setKpiLoading(true);
+        const token = localStorage.getItem("token");
+        const now = new Date();
 
-  const askAI = async (q?: string) => {
+        const res = await axios.get(`${API_BASE}/analytics/dashboard`, {
+          params: { month: now.getMonth() + 1, year: now.getFullYear() },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.data?.success && res.data?.data?.summary) {
+        console.log("✅ DASHBOARD SUMMARY:", res.data.data.summary);
+        setKpi(() => res.data.data.summary);
+      } else {
+        console.error("❌ Invalid Dashboard Response", res.data);
+        setKpi(null);
+      }
+      } catch (err) {
+        console.error("Dashboard KPI Error:", err);
+      } finally {
+        setKpiLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, []);
+
+  const formatInsightValue = (val: any, key: string) => {
+    if (val === null || val === undefined) return "—";
+    if (Array.isArray(val)) return val.length ? val.join(", ") : "—";
+    if (typeof val === "object") return JSON.stringify(val);
+    if (typeof val === "number") {
+      if (/pct|percent|utilization/i.test(key)) return `${val}%`;
+      return Number.isInteger(val) ? val : val.toFixed(2);
+    }
+    return String(val);
+  };
+
+  const askAI = async (textQuery?: string) => {
+    const query = textQuery || question;
+    if (!query.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
     try {
-      const finalQuestion = q || question;
-
-      if (!finalQuestion) return;
-
-      setLoading(true);
+      const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        "http://localhost:5000/api/ai/ask",
-        { question: finalQuestion }
+        `${API_BASE}/ai/ask`,
+        { question: query },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       setResponse({
-        question: finalQuestion,
-        ...res.data
+        query,
+        ...res.data,
+        insights: Array.isArray(res.data?.insights) ? res.data.insights : [],
       });
-
       setQuestion("");
-    } catch (err) {
-      console.error("AI ERROR:", err);
+    } catch (err: any) {
+      console.error("AI Assistant Error:", err);
+      setError(err.response?.data?.message || "Failed to fetch AI insights.");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= UI ================= */
-
   return (
-    <div className="bg-sky-50 min-h-screen p-6 space-y-6">
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-10 font-sans text-slate-900">
+      <div className="max-w-6xl mx-auto space-y-8">
 
-      {/* HEADER */}
-      <div className="flex items-center gap-3">
-        <Brain className="w-8 h-8 text-sky-700" />
-        <h1 className="text-2xl font-bold text-sky-900">
-          AI Insights
-        </h1>
-      </div>
+        {/* HEADER */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg">
+              <Brain className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                Intelligence Engine
+              </h1>
+              <p className="text-slate-500 font-medium">
+                Enterprise Resource Planning & Forecasting
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white border rounded-full text-xs font-bold uppercase tracking-widest text-slate-400">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            Live Data Sync
+          </div>
+        </header>
 
-      {/* ASK AI BOX */}
-      <div className="bg-white border border-sky-200 p-6 rounded-xl shadow-sm">
-        <h2 className="text-sky-900 font-semibold mb-4">
-          Ask AI Assistant
-        </h2>
-
-        <div className="flex gap-3 mb-4">
-          <input
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask about utilization, revenue, bench..."
-            className="flex-1 px-4 py-3 border border-sky-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-          />
-
-          <button
-            onClick={() => askAI()}
-            className="flex items-center gap-2 px-6 py-3 bg-sky-600 text-white rounded-lg text-sm hover:bg-sky-700 transition"
-          >
-            <Send className="w-4 h-4" />
-            Ask
-          </button>
-        </div>
-
-        {/* SAMPLE QUESTIONS */}
-        <div>
-          <p className="text-sm text-sky-600 mb-2">
-            Try asking:
-          </p>
-
-          <div className="space-y-2">
-            {sampleQuestions.map((q) => (
+        {/* SEARCH */}
+        <section className="bg-white rounded-3xl border shadow-xl overflow-hidden">
+          <div className="p-8">
+            <div className="relative">
+              <input
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && askAI()}
+                placeholder="Ask something like: 'Who is on bench this month?'"
+                className="w-full pl-6 pr-32 py-5 bg-slate-50 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+              />
               <button
-                key={q}
-                onClick={() => askAI(q)}
-                className="block w-full text-left px-4 py-2 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded text-sm text-sky-800 transition"
+                onClick={() => askAI()}
+                disabled={loading}
+                className="absolute right-3 top-3 bottom-3 px-6 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
               >
-                {q}
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Ask AI
               </button>
-            ))}
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* RESPONSE */}
-      {loading ? (
-        <div className="bg-white p-6 rounded-xl shadow text-sky-700">
-          🤖 Thinking...
-        </div>
-      ) : response && (
-        <div className="bg-white border border-sky-200 rounded-xl overflow-hidden shadow-sm">
+<div className="flex flex-wrap gap-2 mb-6">
+  {suggestedQueries.map((query, i) => (
+    <button
+      key={i}
+      onClick={() => { setQuestion(query); askAI(query); }}
+      className="text-xs bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full hover:bg-indigo-100 transition border border-indigo-100 font-medium"
+    >
+      {query}
+    </button>
+  ))}
+</div>
 
-          {/* HEADER */}
-          <div className="px-6 py-4 bg-sky-100 border-b border-sky-200 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-sky-600" />
-            <h2 className="text-sky-900 font-semibold">
-              AI Response
-            </h2>
+        {/* ERROR */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex gap-3 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <p className="font-medium">{error}</p>
           </div>
+        )}
 
-          <div className="p-6">
+        {/* LOADING */}
+        {loading && (
+          <div className="py-20 flex flex-col items-center gap-4">
+            <div className="w-14 h-14 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+            <p className="text-slate-500 font-medium animate-pulse">
+              Analyzing workforce data...
+            </p>
+          </div>
+        )}
 
-            {/* QUESTION */}
-            <div className="mb-4 pb-4 border-b border-sky-200">
-              <p className="text-sm text-sky-600 mb-1">Question:</p>
-              <p className="text-sky-900">{response.question}</p>
+        {/* RESULT */}
+        {!loading && response && (
+          <div className="bg-white rounded-3xl border shadow-xl overflow-hidden">
+            <div className="bg-slate-900 px-8 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-indigo-400" />
+                <span className="text-white font-semibold">
+                  AI Generated Report
+                </span>
+              </div>
+              <span className="text-xs italic text-slate-400">
+                "{response.query}"
+              </span>
             </div>
 
-            {/* ANSWER */}
-            <div className="mb-4">
-              <p className="text-sm text-sky-600 mb-1">Answer:</p>
-              <p className="text-sky-900">{response.answer}</p>
-            </div>
-
-            {/* INSIGHTS TABLE */}
-            {response.insights?.length > 0 && (
-              <div className="border border-sky-200 rounded overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-sky-100 border-b border-sky-200">
-                      {Object.keys(response.insights[0]).map((key) => (
-                        <th key={key} className="text-left px-4 py-3 text-sky-800 capitalize">
-                          {key}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {response.insights.map((row: any, i: number) => (
-                      <tr key={i} className="border-b border-sky-100">
-                        {Object.values(row).map((val: any, j) => (
-                          <td key={j} className="px-4 py-3 text-sky-700">
-                            {val}
-                          </td>
+            <div className="p-8">
+              <h3 className="text-2xl font-bold mb-6">
+                {response.answer}
+              </h3>
+              {response.insights?.length ? (
+                <div className="overflow-x-auto border rounded-2xl">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b">
+                        {Object.keys(response.insights[0]).map((key) => (
+                          <th
+                            key={key}
+                            className="px-6 py-4 text-xs font-bold uppercase text-slate-400"
+                          >
+                            {key
+                              .replace(/_/g, " ")
+                              .replace(/([a-z])([A-Z])/g, "$1 $2")}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* EMPTY STATE */}
-            {response.insights?.length === 0 && (
-              <p className="text-sky-600 italic">
-                No structured insights available for this query.
-              </p>
-            )}
+                    </thead>
+                    <tbody>
+                      {response.insights.map((row: any, i: number) => (
+                        <tr key={i} className="hover:bg-slate-50">
+                          {Object.entries(row).map(([key, val]: any, j) => (
+                            <td
+                              key={j}
+                              className="px-6 py-4 text-sm text-slate-600"
+                            >
+                              {String(formatInsightValue(val, key)).includes("%") ? (
+                                <span className="bg-indigo-50 text-indigo-600 font-bold px-2 py-1 rounded">
+                                  {formatInsightValue(val, key)}
+                                </span>
+                              ) : (
+                                formatInsightValue(val, key)
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center py-10 bg-slate-50 border-dashed border-2 rounded-2xl text-slate-400">
+                  <Database className="w-10 h-10 mb-2" />
+                  No detailed data available
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* EXTRA CARDS */}
-      <div className="grid grid-cols-3 gap-4">
-
-        <div className="bg-white border border-sky-200 p-6 rounded-xl shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-sky-400" />
-            <h3 className="text-sm text-sky-700">Utilization Trend</h3>
+        {/* KPI (STATIC / MOCK FOR NOW) */}
+        {!kpiLoading && kpi && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              icon={<TrendingUp />}
+              label="Avg Utilization"
+              value={`${kpi.averageUtilizationPct}%`}
+            />
+            <StatCard
+              icon={<Users />}
+              label="Bench Strength"
+              value={kpi.benchCount}
+            />
+            <StatCard
+              icon={<Briefcase />}
+              label="Billable Employees"
+              value={kpi.billableEmployees}
+            />
+            <StatCard
+              icon={<AlertCircle />}
+              label="Revenue Forecast"
+              value={`₹${kpi.revenueForecast.toLocaleString()}`}
+            />
           </div>
-          <p className="text-2xl text-sky-900">↑ 5%</p>
-          <p className="text-sm text-sky-600">vs last month</p>
-        </div>
+        )}
 
-        <div className="bg-white border border-sky-200 p-6 rounded-xl shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-sky-400" />
-            <h3 className="text-sm text-sky-700">Bench Forecast</h3>
+        {!kpiLoading && !kpi && (
+          <div className="text-center text-slate-400 italic">
+            Dashboard data unavailable
           </div>
-          <p className="text-2xl text-sky-900">Dynamic</p>
-          <p className="text-sm text-sky-600">Ask AI to predict</p>
-        </div>
-
-        <div className="bg-white border border-sky-200 p-6 rounded-xl shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-sky-400" />
-            <h3 className="text-sm text-sky-700">Top Insight</h3>
-          </div>
-          <p className="text-2xl text-sky-900">AI Driven</p>
-          <p className="text-sm text-sky-600">Real-time analytics</p>
-        </div>
+        )}
 
       </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   STAT CARD
+========================================================= */
+
+function StatCard({ icon, label, value }: any) {
+  return (
+    <div className="bg-white p-6 rounded-3xl border shadow-sm">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-3 bg-slate-100 rounded-2xl">{icon}</div>
+        <p className="text-slate-500 font-medium">{label}</p>
+      </div>
+      <h4 className="text-3xl font-black">{value}</h4>
+      <p className="text-xs text-slate-400 italic mt-1">Calculated by AllocAI</p>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import Allocation from "../models/Allocation.js";
 import Employee from "../models/Employee.js";
+import Project from "../models/Project.js";
 
 const MONTHLY_CAPACITY = 160;
 
@@ -12,13 +13,37 @@ export const createAllocation = async (req, res) => {
       month,
       year,
       allocatedHours,
+      allocationFTE,
       isBillable,
+      billingType,
+      startDate,
+      endDate,
     } = req.body;
 
     // ✅ Fetch employee
     const employee = await Employee.findById(employeeId);
     if (!employee) {
       return res.status(404).json({ message: "Employee NOT Found" });
+    }
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project NOT Found" });
+    }
+
+    const hours = Number(
+      allocatedHours || (allocationFTE ? allocationFTE * MONTHLY_CAPACITY : 0)
+    );
+
+    if (!hours || hours <= 0) {
+      return res.status(400).json({
+        message: "Provide allocatedHours or allocationFTE with a valid value",
+      });
+    }
+
+    if (hours > MONTHLY_CAPACITY) {
+      return res.status(400).json({
+        message: "Single allocation cannot exceed 160h",
+      });
     }
 
     // ✅ Calculate existing allocation for month
@@ -32,8 +57,7 @@ export const createAllocation = async (req, res) => {
       (s, a) => s + a.allocatedHours,
       0
     );
-
-    if (totalAllocated + allocatedHours > MONTHLY_CAPACITY) {
+    if (totalAllocated + hours > MONTHLY_CAPACITY) {
       return res.status(400).json({
         message: "Allocation Exceeds Monthly Capacity (160h)",
       });
@@ -45,9 +69,18 @@ export const createAllocation = async (req, res) => {
       workCategoryId,
       month,
       year,
-      allocatedHours,
+      allocatedHours: hours,
+      allocationFTE: Number((hours / MONTHLY_CAPACITY).toFixed(4)),
       isBillable,
-      rateSnapshot: employee.hourlyCost,
+      billingType:
+        billingType ||
+        (isBillable ? "Billable" : "Non-Billable"),
+      startDate,
+      endDate,
+      rateSnapshot:
+        project.billingModel === "Hourly"
+          ? Number(project.billingRate || 0)
+          : Number(project.fixedMonthlyRevenue || 0),
     });
 
     res.status(201).json({ success: true, data: allocation });
@@ -58,13 +91,17 @@ export const createAllocation = async (req, res) => {
 
 // -----------------------------------------------------------------------------------
 export const updateAllocation = async (req, res) => {
-  const { allocatedHours, isBillable } = req.body;
+  const { allocatedHours, allocationFTE, isBillable, billingType, startDate, endDate } = req.body;
   const allocationId = req.params.id;
 
   const allocation = await Allocation.findById(allocationId);
   if (!allocation) {
     return res.status(404).json({ message: "Allocation NOT Found" });
   }
+
+  const hours = Number(
+    allocatedHours || (allocationFTE ? allocationFTE * MONTHLY_CAPACITY : allocation.allocatedHours)
+  );
 
   // ✅ Capacity validation
   const others = await Allocation.find({
@@ -78,15 +115,20 @@ export const updateAllocation = async (req, res) => {
     (s, a) => s + a.allocatedHours,
     0
   );
-
-  if (otherHours + allocatedHours > 160) {
+  if (otherHours + hours > 160) {
     return res.status(400).json({
       message: "Allocation Exceeds Monthly Capacity (160h)",
     });
   }
-
-  allocation.allocatedHours = allocatedHours;
-  allocation.isBillable = isBillable;
+  allocation.allocatedHours = hours;
+  allocation.allocationFTE = Number((hours / 160).toFixed(4));
+  allocation.isBillable = isBillable ?? allocation.isBillable;
+  allocation.billingType =
+    billingType ||
+    allocation.billingType ||
+    (allocation.isBillable ? "Billable" : "Non-Billable");
+  allocation.startDate = startDate || allocation.startDate;
+  allocation.endDate = endDate || allocation.endDate;
   await allocation.save();
 
   res.json({ success: true, data: allocation });

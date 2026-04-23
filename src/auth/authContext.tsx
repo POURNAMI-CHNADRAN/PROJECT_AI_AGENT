@@ -24,33 +24,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  // ✅ RESTORE SESSION ON REFRESH
 useEffect(() => {
   const initAuth = async () => {
-    const token = localStorage.getItem("token");
+    const savedToken = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
 
-    if (!token) {
+    if (!savedToken || !savedUser) {
       setLoading(false);
       return;
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) throw new Error();
-
-      const userData = await res.json();
-
-      setUser(userData);
-      setToken(token);
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
     } catch {
       localStorage.clear();
-      setUser(null);
-      setToken(null);
     } finally {
       setLoading(false);
     }
@@ -60,28 +48,34 @@ useEffect(() => {
 }, []);
 
   // ✅ LOGIN
-  const login = async (email: string, password: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+const login = async (email: string, password: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-      const data = await res.json();
-      if (!res.ok) return false;
+    const data = await res.json();
 
-      setUser(data.user);
-      setToken(data.token);
+    if (!res.ok) return false;
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+    const loggedUser = data.user || data;
 
-      return true;
-    } catch {
-      return false;
-    }
-  };
+    setUser(loggedUser);
+    setToken(data.token);
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(loggedUser));
+
+    return true;
+  } catch (err) {
+  console.error("Login error:", err);
+  return false;
+}
+};
 
   // ✅ LOGOUT (ONLY HERE)
   const logout = () => {

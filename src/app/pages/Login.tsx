@@ -38,29 +38,23 @@ const handleLogin = async (e: React.FormEvent) => {
   setError("");
 
   try {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    const success = await login(email, password);
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Login Failed");
+    if (!success) {
+      setError("Invalid Email or Password");
+      return;
     }
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
     navigate(
-      data.user.role === "Employee" ? "/my-profile" : "/dashboard",
+      savedUser.role === "Employee"
+        ? "/my-profile"
+        : "/dashboard",
       { replace: true }
     );
   } catch (err: any) {
-    setError(err.message);
+    setError(err.message || "Login failed");
   } finally {
     setLoading(false);
   }

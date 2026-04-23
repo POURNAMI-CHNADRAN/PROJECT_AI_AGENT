@@ -18,6 +18,14 @@ const projectSchema = new mongoose.Schema(
 
     billingRate: { type: Number, min: 0 },
 
+    billingModel: {
+      type: String,
+      enum: ["Hourly", "Fixed"],
+      default: "Hourly",
+    },
+
+    fixedMonthlyRevenue: { type: Number, min: 0, default: 0 },
+
     startDate: { type: Date, required: true },
     endDate: Date,
 
@@ -36,7 +44,7 @@ const projectSchema = new mongoose.Schema(
 );
 
 /* ✅ Status → Behavior Mapping */
-projectSchema.pre("save", function (next) {
+projectSchema.pre("save", function () {
   if (this.status === "ACTIVE") {
     this.allowAllocations = true;
     this.allowMoves = true;
@@ -47,7 +55,6 @@ projectSchema.pre("save", function (next) {
     this.allowAllocations = false;
     this.allowMoves = false;
   }
-  next();
 });
 
 export default mongoose.model("Project", projectSchema);

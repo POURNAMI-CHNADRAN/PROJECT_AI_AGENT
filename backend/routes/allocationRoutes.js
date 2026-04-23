@@ -25,7 +25,7 @@ router.put(
 
 // PUT /api/allocations/:id/move
 router.put(
-  "/:id",
+  "/:id/move",
   protect,
   authorize("Admin", "Finance"),
   moveAllocation

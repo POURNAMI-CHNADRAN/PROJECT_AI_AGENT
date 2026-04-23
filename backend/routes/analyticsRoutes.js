@@ -6,7 +6,7 @@ import {
   getProjectHealth,
   getBenchForecast,
   getMoveSuggestions,
-} from "../controllers/analyticsContoller.js";
+} from "../controllers/analyticsController.js";
 
 import { protect, authorize } from "../middleware/authMiddleware.js";
 

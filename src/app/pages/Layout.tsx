@@ -1,9 +1,7 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, useNavigate, Link } from "react-router-dom";
 
-type LayoutProps = { children: ReactNode };
-
-export default function Layout({ children }: LayoutProps) {
+export default function Layout() {
   const navigate = useNavigate();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -203,7 +201,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Page Content */}
         <section className="p-6 flex-1 overflow-auto bg-neutral-50">
-          {children}
+          <Outlet />
         </section>
       </main>
     </div>

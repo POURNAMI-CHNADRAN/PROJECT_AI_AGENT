@@ -8,7 +8,18 @@ import {
 } from "../api/analyticsAPI";
 
 const extract = (res: any) => {
-  if (Array.isArray(res?.data?.data)) return res.data.data;
+  const data = res?.data;
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.results)) return data.results;
+
+  if (data && typeof data === "object") {
+    const firstArray = Object.values(data).find(Array.isArray);
+    if (firstArray) return firstArray;
+  }
+
   return [];
 };
 
@@ -42,8 +53,12 @@ export function useAnalytics(month: number, year: number) {
           fetchMoveSuggestions(),
         ]);
 
-        console.log("UTIL RAW:", utilRes);
-        console.log("BENCH RAW:", benchRes);
+        // DEBUG LOGS
+        console.log("UTIL:", utilRes.data);
+        console.log("BENCH:", benchRes.data);
+        console.log("REV:", revRes.data);
+        console.log("HEALTH:", healthRes.data);
+        console.log("SUGGEST:", suggestRes.data);
 
         if (!mounted) return;
 
@@ -56,11 +71,13 @@ export function useAnalytics(month: number, year: number) {
       } catch (err) {
         console.error("Analytics error:", err);
 
-        setUtilization([]);
-        setBench([]);
-        setRevenue([]);
-        setProjectHealth([]);
-        setSuggestions([]);
+        if (mounted) {
+          setUtilization([]);
+          setBench([]);
+          setRevenue([]);
+          setProjectHealth([]);
+          setSuggestions([]);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
