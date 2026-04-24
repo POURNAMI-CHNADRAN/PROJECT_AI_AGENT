@@ -72,7 +72,7 @@ const login = async (email: string, password: string) => {
 
     return true;
   } catch (err) {
-  console.error("Login error:", err);
+  console.error("Login Error:", err);
   return false;
 }
 };

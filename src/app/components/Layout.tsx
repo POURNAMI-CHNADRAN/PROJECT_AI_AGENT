@@ -46,7 +46,7 @@
 //     { path: "/skills", label: "Skills", icon: Sparkles, roles: ["Admin", "Finance"] },
 //     { path: "/clients", label: "Clients", icon: Briefcase, roles: ["Admin"] },
 //     { path: "/projects", label: "Projects", icon: FolderKanban, roles: ["Admin", "Finance"] },
-//     { path: "/stories", label: "Stories", icon: FileText, roles: ["Admin", "Finance", "Employee"] },
+//     { path: "/Equivalent", label: "Equivalent", icon: FileText, roles: ["Admin", "Finance", "Employee"] },
 //     { path: "/resource-allocation", label: "Resource Allocation", icon: Calendar, roles: ["Admin", "Finance"] },
 //     { path: "/timesheets", label: "Timesheets", icon: Clock, roles: ["Admin", "Finance", "Employee"] },
 //     { path: "/billing", label: "Billing", icon: DollarSign, roles: ["Admin"] },
@@ -232,7 +232,7 @@ export default function Layout() {
     {
       group: "Operations",
       items: [
-        { path: "/stories", label: "Stories", icon: FileText, roles: ["Admin", "Finance", "Employee"] },
+        { path: "/Equivalent", label: "Equivalents", icon: FileText, roles: ["Admin", "Finance", "Employee"] },
         { path: "/timesheets", label: "Timesheets", icon: Clock, roles: ["Admin", "Finance", "Employee"] },
         { path: "/billing", label: "Billing", icon: DollarSign, roles: ["Admin"] },
       ],

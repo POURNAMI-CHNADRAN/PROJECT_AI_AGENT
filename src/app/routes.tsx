@@ -8,7 +8,7 @@
 // import Skills from "./pages/Skills";
 // import Clients from "./pages/Clients";
 // import Projects from "./pages/Projects";
-// import Stories from "./pages/Stories";
+// import Equivalent from "./pages/Equivalent";
 // import ResourceAllocation from "./pages/ResourceAllocation";
 // import Timesheets from "./pages/Timesheets";
 // import Billing from "./pages/Billing";
@@ -36,7 +36,7 @@
 //       { path: "skills", Component: Skills },
 //       { path: "clients", Component: Clients },
 //       { path: "projects", Component: Projects },
-//       { path: "stories", Component: Stories },
+//       { path: "Equivalent", Component: Equivalent },
 //       { path: "resource-allocation", Component: ResourceAllocation },
 //       { path: "timesheets", Component: Timesheets },
 //       { path: "billing", Component: Billing },
@@ -75,7 +75,7 @@ import Segmentations from "./pages/Segmentations";
 import Skills from "./pages/Skills";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
-import Stories from "./pages/Stories";
+import Equivalent from "./pages/Equivalent";
 import ResourceAllocation from "./pages/ResourceAllocation";
 import Timesheets from "./pages/Timesheets";
 import Billing from "./pages/Billing";
@@ -113,7 +113,7 @@ export const router = createBrowserRouter([
       { path: "skills", element: <Skills /> },
       { path: "clients", element: <Clients /> },
       { path: "projects", element: <Projects /> },
-      { path: "stories", element: <Stories /> },
+      { path: "Equivalent", element: <Equivalent /> },
       { path: "resource-allocation", element: <ResourceAllocation /> },
       { path: "timesheets", element: <Timesheets /> },
       { path: "billing", element: <Billing /> },

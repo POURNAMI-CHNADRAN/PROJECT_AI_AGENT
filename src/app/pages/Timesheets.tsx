@@ -54,7 +54,7 @@ export default function Timesheets() {
 
   const [employees, setEmployees] = useState<EmployeeRef[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [stories, setStories] = useState<Story[]>([]);
+  const [Equivalent, setStories] = useState<Story[]>([]);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
 
   const [search, setSearch] = useState("");
@@ -180,7 +180,7 @@ export default function Timesheets() {
     if (role === "Employee") {
       const assigned = projList.filter((p: any) => p.assignedTo === userId);
 
-      const storyJson = await fetch(`${API_BASE}/api/stories`, {
+      const storyJson = await fetch(`${API_BASE}/api/Equivalent`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => r.json());
 
@@ -202,13 +202,13 @@ export default function Timesheets() {
   }, []);
 
   /* ============================================================
-     LOAD STORIES WHEN PROJECT CHANGES
+     LOAD Equivalent WHEN PROJECT CHANGES
   ============================================================= */
 
   useEffect(() => {
     if (!form.project_id) return setStories([]);
 
-    fetch(`${API_BASE}/api/stories?project_id=${form.project_id}`, {
+    fetch(`${API_BASE}/api/Equivalent?project_id=${form.project_id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
@@ -389,7 +389,7 @@ const rejectTimesheet = async (id: string) => {
                 className="w-full px-4 py-2 bg-sky-100 border rounded-lg"
               >
                 <option value="">Select Story</option>
-                {stories.map((s) => (
+                {Equivalent.map((s) => (
                   <option key={s._id} value={s._id}>
                     {s.title} ({s.story_points} pts)
                   </option>

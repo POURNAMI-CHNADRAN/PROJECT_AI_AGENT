@@ -9,7 +9,7 @@ import Segmentations from "./pages/Segmentations";
 import Skills from "./pages/Skills";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
-import Stories from "./pages/Stories";
+import Equivalents from "./pages/Equivalent";
 import ResourceAllocation from "./pages/ResourceAllocation";
 import Timesheets from "./pages/Timesheets";
 import Billing from "./pages/Billing";
@@ -56,7 +56,7 @@ export default function App() {
           <Route path="/skills" element={<Skills />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/projects" element={<Projects />} />
-          <Route path="/stories" element={<Stories />} />
+          <Route path="/equivalent" element={<Equivalents />} />
 
           {/* ===== OPERATIONS ===== */}
           <Route path="/resource-allocation" element={<ResourceAllocation />} />
